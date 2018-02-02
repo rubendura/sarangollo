@@ -1,0 +1,7 @@
+[package]
+name = "sarangollo"
+version = "0.1.0"
+authors = ["Rubén Durá Tarí <rubendura@gmail.com>"]
+
+[dependencies]
+itertools = "0.6.2"
