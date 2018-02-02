@@ -7,7 +7,6 @@ pub struct Scoreboard {
 }
 
 impl Scoreboard {
-
     pub fn new() -> Scoreboard {
         let mut scoreboard = Scoreboard { cotos: Vec::new() };
         scoreboard.start_coto();
@@ -21,7 +20,6 @@ impl Scoreboard {
     fn get_current_coto(&self) -> &Coto {
         unimplemented!();
     }
-
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -30,8 +28,14 @@ struct RoundScoreSection(Team, u8);
 impl RoundScoreSection {
     fn to_score_delta(&self) -> ScoreDelta {
         match self.0 {
-            Team::Team1 => ScoreDelta { team1: self.1, team2: 0 },
-            Team::Team2 => ScoreDelta { team1: 0, team2: self.1 }
+            Team::Team1 => ScoreDelta {
+                team1: self.1,
+                team2: 0,
+            },
+            Team::Team2 => ScoreDelta {
+                team1: 0,
+                team2: self.1,
+            },
         }
     }
 }
@@ -39,15 +43,15 @@ impl RoundScoreSection {
 #[derive(Debug, PartialEq)]
 struct ScoreDelta {
     team1: u8,
-    team2: u8
+    team2: u8,
 }
 
 impl Add<ScoreDelta> for CamaScore {
     type Output = CamaScore;
     fn add(self, rhs: ScoreDelta) -> Self::Output {
-        CamaScore{
+        CamaScore {
             team1: self.team1 + rhs.team1,
-            team2: self.team2 + rhs.team2
+            team2: self.team2 + rhs.team2,
         }
     }
 }
@@ -63,22 +67,19 @@ pub struct RoundScore {
 
 impl RoundScore {
     fn to_score_deltas(&self) -> Vec<ScoreDelta> {
-        let deltas = [
-            self.rey,
-            self.flor,
-            self.secansa,
-            self.ali
-        ];
-        let mut deltas: Vec<ScoreDelta> = deltas.iter().flat_map(|x| x.iter()).map(|x| x.to_score_delta()).collect();
-        deltas.push(self.truc.to_score_delta());
+        let deltas = [self.rey, self.flor, self.secansa, self.ali, Some(self.truc)];
         deltas
+            .iter()
+            .flat_map(|x| x.iter())
+            .map(|x| x.to_score_delta())
+            .collect()
     }
 }
 
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Default, Copy, Clone)]
 struct CamaScore {
     team1: u8,
-    team2: u8
+    team2: u8,
 }
 
 #[derive(Debug, Default, PartialEq, Clone)]
@@ -87,9 +88,11 @@ struct Cama {
 }
 
 impl Cama {
-
     fn get_current_score(&self) -> CamaScore {
-        self.rounds.iter().flat_map(|x| x.to_score_deltas()).fold(CamaScore::default(), |acc, delta| acc + delta)
+        self.rounds
+            .iter()
+            .flat_map(|x| x.to_score_deltas())
+            .fold(CamaScore::default(), |acc, delta| acc + delta)
     }
 
     fn annotate(&mut self, score: RoundScore) {
@@ -98,41 +101,24 @@ impl Cama {
 
     fn winner(&self) -> Option<Team> {
         let winning_score = 40;
-        let mut team1_score = 0;
-        let mut team2_score = 0;
-        for round in &self.rounds {
-            let mut score_parts = vec![];
-            if let Some(ref rey) = round.rey {
-                score_parts.push(rey);
-            }
-            if let Some(ref flor) = round.flor {
-                score_parts.push(flor);
-            }
-            if let Some(ref secansa) = round.secansa {
-                score_parts.push(secansa);
-            }
-            if let Some(ref ali) = round.ali {
-                score_parts.push(ali);
-            }
-            score_parts.push(&round.truc);
-            for part in &score_parts {
-                match part.0 {
-                    Team::Team1 => {
-                        team1_score += part.1;
-                        if team1_score >= winning_score {
-                            return Some(Team::Team1);
-                        }
-                    }
-                    Team::Team2 => {
-                        team2_score += part.1;
-                        if team2_score >= winning_score {
-                            return Some(Team::Team2);
-                        }
-                    }
+        self.rounds
+            .iter()
+            .flat_map(|x| x.to_score_deltas())
+            .scan(CamaScore::default(), |state, x| {
+                *state = *state + x;
+                Some(*state)
+            })
+            .filter(|cama_score| {
+                cama_score.team1 >= winning_score || cama_score.team2 >= winning_score
+            })
+            .map(|cama_score| {
+                if cama_score.team1 >= winning_score {
+                    Team::Team1
+                } else {
+                    Team::Team2
                 }
-            }
-        }
-        None
+            })
+            .nth(0)
     }
 }
 
@@ -142,7 +128,6 @@ struct Coto {
 }
 
 impl Coto {
-
     fn new() -> Coto {
         let mut coto = Coto { cames: vec![] };
         coto.start_cama();
@@ -154,7 +139,9 @@ impl Coto {
     }
 
     fn get_current_cama(&mut self) -> &mut Cama {
-        self.cames.last_mut().expect("Coto not properly initialised")
+        self.cames
+            .last_mut()
+            .expect("Coto not properly initialised")
     }
 
     fn winner(&self) -> Option<Team> {
@@ -205,7 +192,7 @@ mod tests {
             flor: Some(RoundScoreSection(Team::Team1, 3)),
             secansa: Some(RoundScoreSection(Team::Team1, 1)),
             ali: Some(RoundScoreSection(Team::Team2, 5)),
-            truc: RoundScoreSection(Team::Team1, 1)
+            truc: RoundScoreSection(Team::Team1, 1),
         });
         let cama2 = coto.get_current_cama();
         assert!(cama1 != *cama2);
@@ -218,7 +205,7 @@ mod tests {
             flor: Some(RoundScoreSection(Team::Team1, 3)),
             secansa: Some(RoundScoreSection(Team::Team1, 1)),
             ali: Some(RoundScoreSection(Team::Team2, 5)),
-            truc: RoundScoreSection(Team::Team1, 1)
+            truc: RoundScoreSection(Team::Team1, 1),
         };
         let mut cama = Cama::default();
         assert!(cama.rounds.len() == 0);
@@ -235,17 +222,20 @@ mod tests {
             flor: Some(RoundScoreSection(Team::Team1, 3)),
             secansa: Some(RoundScoreSection(Team::Team1, 1)),
             ali: Some(RoundScoreSection(Team::Team2, 5)),
-            truc: RoundScoreSection(Team::Team1, 1)
+            truc: RoundScoreSection(Team::Team1, 1),
         });
         cama.annotate(RoundScore {
             rey: Some(RoundScoreSection(Team::Team1, 2)),
             flor: Some(RoundScoreSection(Team::Team2, 6)),
             secansa: Some(RoundScoreSection(Team::Team1, 3)),
             ali: Some(RoundScoreSection(Team::Team1, 1)),
-            truc: RoundScoreSection(Team::Team1, 1)
+            truc: RoundScoreSection(Team::Team1, 1),
         });
         let score = cama.get_current_score();
-        let expected = CamaScore { team1: 12, team2: 11 };
+        let expected = CamaScore {
+            team1: 12,
+            team2: 11,
+        };
         assert_eq!(score, expected);
     }
 
