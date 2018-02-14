@@ -13,12 +13,38 @@ impl Scoreboard {
         scoreboard
     }
 
+    pub fn winner(&self) -> Option<Team> {
+        let winning_score = 2;
+        self.cotos
+            .iter()
+            .map(|coto| coto.winner())
+            .scan((0, 0), |state, x| {
+                *state = match x {
+                    Some(Team::Team1) => (state.0 + 1, state.1),
+                    Some(Team::Team2) => (state.0, state.1 + 1),
+                    _ => *state,
+                };
+                Some(*state)
+            })
+            .filter(|coto_score| coto_score.0 >= winning_score || coto_score.1 >= winning_score)
+            .map(|coto_score| {
+                if coto_score.0 >= winning_score {
+                    Team::Team1
+                } else {
+                    Team::Team2
+                }
+            })
+            .nth(0)
+    }
+
     fn start_coto(&mut self) {
         self.cotos.push(Coto::new());
     }
 
-    fn get_current_coto(&self) -> &Coto {
-        unimplemented!();
+    fn get_current_coto(&mut self) -> &mut Coto {
+        self.cotos
+            .last_mut()
+            .expect("Scoreboard not properly initialised")
     }
 }
 
@@ -122,7 +148,7 @@ impl Cama {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 struct Coto {
     cames: Vec<Cama>,
 }
@@ -153,18 +179,15 @@ impl Coto {
                 *state = match x {
                     Some(Team::Team1) => (state.0 + 1, state.1),
                     Some(Team::Team2) => (state.0, state.1 + 1),
-                    _ => *state
+                    _ => *state,
                 };
                 Some(*state)
             })
-            .filter(|cama_score| {
-                cama_score.0 >= winning_score || cama_score.1 >= winning_score
-            })
+            .filter(|cama_score| cama_score.0 >= winning_score || cama_score.1 >= winning_score)
             .map(|cama_score| {
                 if cama_score.0 >= winning_score {
                     Team::Team1
-                }
-                else {
+                } else {
                     Team::Team2
                 }
             })
@@ -178,17 +201,77 @@ mod tests {
 
     #[test]
     fn scoreboard_get_current_coto() {
-        unimplemented!();
+        let mut scoreboard = Scoreboard::new();
+        scoreboard.get_current_coto().start_cama();
+        let coto1 = scoreboard.get_current_coto().clone();
+        scoreboard.start_coto();
+        let coto2 = scoreboard.get_current_coto();
+        assert!(coto1 != *coto2);
     }
 
     #[test]
     fn scoreboard_start_coto() {
-        unimplemented!();
+        let mut scoreboard = Scoreboard { cotos: Vec::new() };
+        scoreboard.start_coto();
+        assert!(!scoreboard.cotos.is_empty());
     }
 
     #[test]
     fn scoreboard_new() {
-        unimplemented!();
+        let scoreboard = Scoreboard::new();
+        assert!(!scoreboard.cotos.is_empty());
+        assert!(!scoreboard.cotos.first().unwrap().cames.is_empty());
+    }
+
+    #[test]
+    fn scoreboard_winner() {
+        let mut scoreboard = Scoreboard::new();
+        assert!(scoreboard.winner().is_none());
+
+        fn annotate(scoreboard: &mut Scoreboard, team: Team) {
+            scoreboard
+                .get_current_coto()
+                .get_current_cama()
+                .annotate(RoundScore {
+                    rey: None,
+                    flor: None,
+                    secansa: None,
+                    ali: None,
+                    truc: RoundScoreSection(team, 40),
+                });
+            scoreboard.get_current_coto().start_cama();
+        }
+
+        annotate(&mut scoreboard, Team::Team1);
+        assert!(scoreboard.winner().is_none());
+
+        annotate(&mut scoreboard, Team::Team2);
+        assert!(scoreboard.winner().is_none());
+
+        annotate(&mut scoreboard, Team::Team2);
+        // Team2 coto
+        assert!(scoreboard.winner().is_none());
+
+        scoreboard.start_coto();
+
+        annotate(&mut scoreboard, Team::Team2);
+        assert!(scoreboard.winner().is_none());
+
+        annotate(&mut scoreboard, Team::Team1);
+        assert!(scoreboard.winner().is_none());
+
+        annotate(&mut scoreboard, Team::Team1);
+        // Team1 coto
+        assert!(scoreboard.winner().is_none());
+
+        scoreboard.start_coto();
+
+        annotate(&mut scoreboard, Team::Team1);
+        assert!(scoreboard.winner().is_none());
+
+        annotate(&mut scoreboard, Team::Team1);
+        // Team1 wins!
+        assert_eq!(scoreboard.winner(), Some(Team::Team1));
     }
 
     #[test]
@@ -208,15 +291,15 @@ mod tests {
     #[test]
     fn coto_get_current_cama() {
         let mut coto = Coto::new();
-        coto.start_cama();
-        let mut cama1 = coto.get_current_cama().clone();
-        cama1.annotate(RoundScore {
+        coto.get_current_cama().annotate(RoundScore {
             rey: None,
             flor: Some(RoundScoreSection(Team::Team1, 3)),
             secansa: Some(RoundScoreSection(Team::Team1, 1)),
             ali: Some(RoundScoreSection(Team::Team2, 5)),
             truc: RoundScoreSection(Team::Team1, 1),
         });
+        let cama1 = coto.get_current_cama().clone();
+        coto.start_cama();
         let cama2 = coto.get_current_cama();
         assert!(cama1 != *cama2);
     }
@@ -256,7 +339,7 @@ mod tests {
         });
 
         assert_eq!(coto.winner(), Some(Team::Team1));
-    } 
+    }
 
     #[test]
     fn cama_annotate() {
