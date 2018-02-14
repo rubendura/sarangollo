@@ -7,7 +7,7 @@ mod scoreboard;
 use scoreboard::Scoreboard;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
-enum Team {
+pub enum Team {
     Team1,
     Team2,
 }
