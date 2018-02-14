@@ -145,7 +145,30 @@ impl Coto {
     }
 
     fn winner(&self) -> Option<Team> {
-        None
+        let winning_score = 2;
+        self.cames
+            .iter()
+            .map(|cama| cama.winner())
+            .scan((0, 0), |state, x| {
+                *state = match x {
+                    Some(Team::Team1) => (state.0 + 1, state.1),
+                    Some(Team::Team2) => (state.0, state.1 + 1),
+                    _ => *state
+                };
+                Some(*state)
+            })
+            .filter(|cama_score| {
+                cama_score.0 >= winning_score || cama_score.1 >= winning_score
+            })
+            .map(|cama_score| {
+                if cama_score.0 >= winning_score {
+                    Team::Team1
+                }
+                else {
+                    Team::Team2
+                }
+            })
+            .nth(0)
     }
 }
 
@@ -199,6 +222,43 @@ mod tests {
     }
 
     #[test]
+    fn coto_winner() {
+        let mut coto = Coto::new();
+        assert_eq!(coto.winner(), None);
+
+        coto.start_cama();
+        coto.get_current_cama().annotate(RoundScore {
+            rey: None,
+            flor: None,
+            secansa: None,
+            ali: None,
+            truc: RoundScoreSection(Team::Team1, 40),
+        });
+        assert_eq!(coto.winner(), None);
+
+        coto.start_cama();
+        coto.get_current_cama().annotate(RoundScore {
+            rey: None,
+            flor: None,
+            secansa: None,
+            ali: None,
+            truc: RoundScoreSection(Team::Team2, 40),
+        });
+        assert_eq!(coto.winner(), None);
+
+        coto.start_cama();
+        coto.get_current_cama().annotate(RoundScore {
+            rey: None,
+            flor: None,
+            secansa: None,
+            ali: None,
+            truc: RoundScoreSection(Team::Team1, 40),
+        });
+
+        assert_eq!(coto.winner(), Some(Team::Team1));
+    } 
+
+    #[test]
     fn cama_annotate() {
         let round_score = RoundScore {
             rey: None,
@@ -240,7 +300,7 @@ mod tests {
     }
 
     #[test]
-    fn winner() {
+    fn cama_winner() {
         // Team1: 35, Team2: 34
         let current_score = RoundScore {
             rey: None,
