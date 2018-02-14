@@ -92,6 +92,37 @@ pub struct RoundScore {
 }
 
 impl RoundScore {
+
+    pub fn new(truc_score: u8, team: Team) -> Self {
+        RoundScore {
+            rey: None,
+            flor: None,
+            secansa: None,
+            ali: None,
+            truc: RoundScoreSection(team, truc_score),
+        }
+    }
+
+    pub fn set_flor(&mut self, score: u8, team: Team) {
+        self.flor = Some(RoundScoreSection(team, score));
+    }
+
+    pub fn set_secansa(&mut self, score: u8, team: Team) {
+        self.secansa = Some(RoundScoreSection(team, score));
+    }
+
+    pub fn set_ali(&mut self, score: u8, team: Team) {
+        self.ali = Some(RoundScoreSection(team, score));
+    }
+
+    pub fn set_truc(&mut self, score: u8, team: Team) {
+        self.truc = RoundScoreSection(team, score);
+    }
+
+    pub fn set_rey(&mut self, score: u8, team: Team) {
+        self.rey = Some(RoundScoreSection(team, score));
+    }
+
     fn to_score_deltas(&self) -> Vec<ScoreDelta> {
         let deltas = [self.rey, self.flor, self.secansa, self.ali, Some(self.truc)];
         deltas
@@ -411,5 +442,52 @@ mod tests {
         let winner = current_cama.winner();
 
         assert_eq!(winner, Some(Team::Team2));
+    }
+
+    #[test]
+    fn round_score_new() {
+        let round_score = RoundScore::new(3, Team::Team2);
+        assert_eq!(round_score.truc.0, Team::Team2);
+        assert_eq!(round_score.truc.1, 3);
+    }
+
+    #[test]
+    fn round_score_set_flor() {
+        let mut round_score = RoundScore::new(3, Team::Team2);
+        round_score.set_flor(6, Team::Team1);
+        assert_eq!(round_score.flor.unwrap().0, Team::Team1);
+        assert_eq!(round_score.flor.unwrap().1, 6);
+    }
+
+    #[test]
+    fn round_score_set_secansa() {
+        let mut round_score = RoundScore::new(3, Team::Team2);
+        round_score.set_secansa(6, Team::Team1);
+        assert_eq!(round_score.secansa.unwrap().0, Team::Team1);
+        assert_eq!(round_score.secansa.unwrap().1, 6);
+    }
+
+    #[test]
+    fn round_score_set_ali() {
+        let mut round_score = RoundScore::new(3, Team::Team2);
+        round_score.set_ali(6, Team::Team1);
+        assert_eq!(round_score.ali.unwrap().0, Team::Team1);
+        assert_eq!(round_score.ali.unwrap().1, 6);
+    }
+
+    #[test]
+    fn round_score_set_rey() {
+        let mut round_score = RoundScore::new(3, Team::Team2);
+        round_score.set_rey(6, Team::Team1);
+        assert_eq!(round_score.rey.unwrap().0, Team::Team1);
+        assert_eq!(round_score.rey.unwrap().1, 6);
+    }
+
+    #[test]
+    fn round_score_set_truc() {
+        let mut round_score = RoundScore::new(3, Team::Team2);
+        round_score.set_truc(6, Team::Team1);
+        assert_eq!(round_score.truc.0, Team::Team1);
+        assert_eq!(round_score.truc.1, 6);
     }
 }
