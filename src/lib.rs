@@ -3,6 +3,7 @@ extern crate itertools;
 
 mod deck;
 pub mod scoreboard;
+mod hands;
 
 use scoreboard::Scoreboard;
 

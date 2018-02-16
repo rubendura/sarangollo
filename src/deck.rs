@@ -10,7 +10,7 @@ pub trait Deck {
     fn shuffle(&mut self);
 }
 
-mod spanish_deck {
+pub mod spanish_deck {
     use super::Deck;
 
     #[derive(Debug, Copy, Clone, PartialEq, Eq)]
