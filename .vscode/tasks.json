@@ -50,6 +50,15 @@
             "args": [
                 "clean"
             ]
+        },
+        {
+            "taskName": "cargo fmt",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "fmt"
+            ],
+            "problemMatcher": []
         }
     ]
 }
