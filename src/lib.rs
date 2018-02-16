@@ -2,7 +2,7 @@
 extern crate itertools;
 
 mod deck;
-mod scoreboard;
+pub mod scoreboard;
 
 use scoreboard::Scoreboard;
 

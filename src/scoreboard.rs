@@ -13,6 +13,15 @@ impl Scoreboard {
         scoreboard
     }
 
+    pub fn annotate(&mut self, round_score: RoundScore) {
+        //! Annotate a round on the scoreboard and perform management tasks to rotate camas and cotos when required
+
+        self.get_current_coto().annotate(round_score);
+        if self.get_current_coto().winner().is_some() {
+            self.start_coto();
+        }
+    }
+
     pub fn winner(&self) -> Option<Team> {
         let winning_score = 2;
         self.cotos
@@ -49,7 +58,7 @@ impl Scoreboard {
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
-struct RoundScoreSection(Team, u8);
+pub struct RoundScoreSection(Team, u8);
 
 impl RoundScoreSection {
     fn to_score_delta(&self) -> ScoreDelta {
@@ -84,11 +93,11 @@ impl Add<ScoreDelta> for CamaScore {
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct RoundScore {
-    rey: Option<RoundScoreSection>,
-    flor: Option<RoundScoreSection>,
-    secansa: Option<RoundScoreSection>,
-    ali: Option<RoundScoreSection>,
-    truc: RoundScoreSection,
+    pub rey: Option<RoundScoreSection>,
+    pub flor: Option<RoundScoreSection>,
+    pub secansa: Option<RoundScoreSection>,
+    pub ali: Option<RoundScoreSection>,
+    pub truc: RoundScoreSection,
 }
 
 impl RoundScore {
@@ -170,6 +179,15 @@ impl Coto {
             .expect("Coto not properly initialised")
     }
 
+    fn annotate(&mut self, round_score: RoundScore) {
+        //! Annotate a round on the coto and perform management tasks to rotate camas when required
+
+        self.get_current_cama().annotate(round_score);
+        if self.get_current_cama().winner().is_some() {
+            self.start_cama();
+        }
+    }
+
     fn winner(&self) -> Option<Team> {
         let winning_score = 2;
         self.cames
@@ -221,6 +239,72 @@ mod tests {
         let scoreboard = Scoreboard::new();
         assert!(!scoreboard.cotos.is_empty());
         assert!(!scoreboard.cotos.first().unwrap().cames.is_empty());
+    }
+
+    #[test]
+    fn scoreboard_annotate_writes_round_score() {
+        let mut scoreboard = Scoreboard::new();
+        scoreboard.annotate(RoundScore {
+            rey: None,
+            flor: None,
+            secansa: None,
+            ali: None,
+            truc: RoundScoreSection(Team::Team1, 3),
+        });
+        assert!(!scoreboard
+            .get_current_coto()
+            .get_current_cama()
+            .rounds
+            .is_empty());
+    }
+
+    #[test]
+    fn scoreboard_annotate_rotates_camas() {
+        let mut scoreboard = Scoreboard::new();
+        scoreboard.annotate(RoundScore {
+            rey: None,
+            flor: None,
+            secansa: None,
+            ali: None,
+            truc: RoundScoreSection(Team::Team1, 3),
+        });
+        assert_eq!(scoreboard.get_current_coto().cames.len(), 1);
+        scoreboard.annotate(RoundScore {
+            rey: None,
+            flor: None,
+            secansa: None,
+            ali: None,
+            truc: RoundScoreSection(Team::Team1, 37),
+        });
+        assert_eq!(scoreboard.get_current_coto().cames.len(), 2);
+    }
+
+    #[test]
+    fn scoreboard_annotate_rotates_cotos() {
+        let mut scoreboard = Scoreboard::new();
+        scoreboard.annotate(RoundScore {
+            rey: None,
+            flor: None,
+            secansa: None,
+            ali: None,
+            truc: RoundScoreSection(Team::Team1, 40),
+        });
+        scoreboard.annotate(RoundScore {
+            rey: None,
+            flor: None,
+            secansa: None,
+            ali: None,
+            truc: RoundScoreSection(Team::Team2, 40),
+        });
+        assert_eq!(scoreboard.cotos.len(), 1);
+        scoreboard.annotate(RoundScore {
+            rey: None,
+            flor: None,
+            secansa: None,
+            ali: None,
+            truc: RoundScoreSection(Team::Team1, 40),
+        });
+        assert_eq!(scoreboard.cotos.len(), 2);
     }
 
     #[test]
@@ -302,6 +386,40 @@ mod tests {
         coto.start_cama();
         let cama2 = coto.get_current_cama();
         assert!(cama1 != *cama2);
+    }
+
+    #[test]
+    fn coto_annotate_writes_round_score() {
+        let mut coto = Coto::new();
+        coto.annotate(RoundScore {
+            rey: None,
+            flor: None,
+            secansa: None,
+            ali: None,
+            truc: RoundScoreSection(Team::Team1, 3),
+        });
+        assert!(!coto.get_current_cama().rounds.is_empty());
+    }
+
+    #[test]
+    fn coto_annotate_rotates_camas() {
+        let mut coto = Coto::new();
+        coto.annotate(RoundScore {
+            rey: None,
+            flor: None,
+            secansa: None,
+            ali: None,
+            truc: RoundScoreSection(Team::Team1, 3),
+        });
+        assert_eq!(coto.cames.len(), 1);
+        coto.annotate(RoundScore {
+            rey: None,
+            flor: None,
+            secansa: None,
+            ali: None,
+            truc: RoundScoreSection(Team::Team1, 37),
+        });
+        assert_eq!(coto.cames.len(), 2);
     }
 
     #[test]
