@@ -105,7 +105,7 @@ impl RoundScore {
         let deltas = [self.rey, self.flor, self.secansa, self.ali, Some(self.truc)];
         deltas
             .iter()
-            .flat_map(|x| x.iter())
+            .filter_map(|x| *x)
             .map(|x| x.to_score_delta())
             .collect()
     }
