@@ -23,7 +23,7 @@ pub mod spanish_deck {
 
     static SUITS: [Suit; 4] = [Suit::Oros, Suit::Copas, Suit::Bastos, Suit::Espadas];
 
-    #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+    #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
     pub enum Value {
         Uno,
         Dos,
@@ -36,6 +36,24 @@ pub mod spanish_deck {
         Caballo,
         Rey,
     }
+
+    impl Value {
+        pub fn next(&self) -> Option<Value> {
+            match *self {
+                Value::Uno => Some(Value::Dos),
+                Value::Dos => Some(Value::Tres),
+                Value::Tres => Some(Value::Cuatro),
+                Value::Cuatro => Some(Value::Cinco),
+                Value::Cinco => Some(Value::Seis),
+                Value::Seis => Some(Value::Siete),
+                Value::Siete => Some(Value::Sota),
+                Value::Sota => Some(Value::Caballo),
+                Value::Caballo => Some(Value::Rey),
+                Value::Rey => None
+            }
+        }
+    }
+
     static VALUES: [Value; 10] = [
         Value::Uno,
         Value::Dos,
