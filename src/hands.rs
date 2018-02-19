@@ -1,8 +1,13 @@
 use itertools::Itertools;
 use deck::Card;
 
-fn is_flor(cards: &[&Card; 3]) -> bool {
-    cards.iter().map(|card| card.suit).all_equal()
+fn is_flor(cards: &[&Card; 3], marker: Card) -> bool {
+    cards
+        .iter()
+        .filter(|card| !card.is_perico(marker))
+        .filter(|card| !card.is_perica(marker))
+        .map(|card| card.suit)
+        .all_equal()
 }
 
 fn is_secansa(cards: &[&Card; 3]) -> bool {
@@ -45,7 +50,11 @@ mod tests {
                 value: Value::Tres,
             },
         ];
-        assert!(is_flor(&hand));
+        let marker = Card {
+            suit: Suit::Bastos,
+            value: Value::Uno,
+        };
+        assert!(is_flor(&hand, marker));
     }
 
     #[test]
@@ -64,7 +73,126 @@ mod tests {
                 value: Value::Tres,
             },
         ];
-        assert!(!is_flor(&hand));
+        let marker = Card {
+            suit: Suit::Bastos,
+            value: Value::Uno,
+        };
+        assert!(!is_flor(&hand, marker));
+    }
+
+    #[test]
+    fn is_flor_false_perico() {
+        let hand = [
+            &Card {
+                suit: Suit::Oros,
+                value: Value::Uno,
+            },
+            &Card {
+                suit: Suit::Espadas,
+                value: Value::Dos,
+            },
+            &Card {
+                suit: Suit::Bastos,
+                value: Value::Caballo,
+            },
+        ];
+        let marker = Card {
+            suit: Suit::Bastos,
+            value: Value::Uno,
+        };
+        assert!(!is_flor(&hand, marker));
+    }
+
+    #[test]
+    fn is_flor_false_perica() {
+        let hand = [
+            &Card {
+                suit: Suit::Oros,
+                value: Value::Uno,
+            },
+            &Card {
+                suit: Suit::Bastos,
+                value: Value::Dos,
+            },
+            &Card {
+                suit: Suit::Bastos,
+                value: Value::Sota,
+            },
+        ];
+        let marker = Card {
+            suit: Suit::Bastos,
+            value: Value::Uno,
+        };
+        assert!(!is_flor(&hand, marker));
+    }
+
+    #[test]
+    fn is_flor_perico() {
+        let hand = [
+            &Card {
+                suit: Suit::Oros,
+                value: Value::Uno,
+            },
+            &Card {
+                suit: Suit::Oros,
+                value: Value::Dos,
+            },
+            &Card {
+                suit: Suit::Bastos,
+                value: Value::Caballo,
+            },
+        ];
+        let marker = Card {
+            suit: Suit::Bastos,
+            value: Value::Uno,
+        };
+        assert!(is_flor(&hand, marker));
+    }
+
+    #[test]
+    fn is_flor_perica() {
+        let hand = [
+            &Card {
+                suit: Suit::Oros,
+                value: Value::Uno,
+            },
+            &Card {
+                suit: Suit::Oros,
+                value: Value::Dos,
+            },
+            &Card {
+                suit: Suit::Bastos,
+                value: Value::Sota,
+            },
+        ];
+        let marker = Card {
+            suit: Suit::Bastos,
+            value: Value::Uno,
+        };
+        assert!(is_flor(&hand, marker));
+    }
+
+    #[test]
+    fn is_flor_perico_perica() {
+        let hand = [
+            &Card {
+                suit: Suit::Oros,
+                value: Value::Uno,
+            },
+            &Card {
+                suit: Suit::Bastos,
+                value: Value::Sota,
+            },
+            &Card {
+                suit: Suit::Bastos,
+                value: Value::Caballo,
+            },
+        ];
+        let marker = Card {
+            suit: Suit::Bastos,
+            value: Value::Uno,
+        };
+        assert!(is_flor(&hand, marker));
     }
 
     #[test]
