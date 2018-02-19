@@ -49,7 +49,7 @@ pub mod spanish_deck {
                 Value::Siete => Some(Value::Sota),
                 Value::Sota => Some(Value::Caballo),
                 Value::Caballo => Some(Value::Rey),
-                Value::Rey => None
+                Value::Rey => None,
             }
         }
     }
