@@ -73,6 +73,28 @@ pub mod spanish_deck {
         pub value: Value,
     }
 
+    impl Card {
+        pub fn is_perico(&self, marker: Card) -> bool {
+            match marker {
+                Card {
+                    suit,
+                    value: Value::Caballo,
+                } => self.suit == suit && self.value == Value::Rey,
+                Card { suit, .. } => self.suit == suit && self.value == Value::Caballo,
+            }
+        }
+
+        pub fn is_perica(&self, marker: Card) -> bool {
+            match marker {
+                Card {
+                    suit,
+                    value: Value::Sota,
+                } => self.suit == suit && self.value == Value::Rey,
+                Card { suit, .. } => self.suit == suit && self.value == Value::Sota,
+            }
+        }
+    }
+
     pub struct SpanishDeck {
         cards: Vec<Card>,
     }
@@ -99,6 +121,90 @@ pub mod spanish_deck {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
-    fn create_deck() {}
+    fn card_is_perico() {
+        let marker = Card {
+            suit: Suit::Oros,
+            value: Value::Uno,
+        };
+        let card = Card {
+            suit: Suit::Oros,
+            value: Value::Caballo,
+        };
+        assert!(card.is_perico(marker));
+
+        let marker = Card {
+            suit: Suit::Oros,
+            value: Value::Caballo,
+        };
+        let card = Card {
+            suit: Suit::Oros,
+            value: Value::Rey,
+        };
+        assert!(card.is_perico(marker));
+
+        let marker = Card {
+            suit: Suit::Oros,
+            value: Value::Uno,
+        };
+        let card = Card {
+            suit: Suit::Oros,
+            value: Value::Tres,
+        };
+        assert!(!card.is_perico(marker));
+
+        let marker = Card {
+            suit: Suit::Oros,
+            value: Value::Uno,
+        };
+        let card = Card {
+            suit: Suit::Bastos,
+            value: Value::Caballo,
+        };
+        assert!(!card.is_perico(marker));
+    }
+
+    #[test]
+    fn card_is_perica() {
+        let marker = Card {
+            suit: Suit::Oros,
+            value: Value::Uno,
+        };
+        let card = Card {
+            suit: Suit::Oros,
+            value: Value::Sota,
+        };
+        assert!(card.is_perica(marker));
+
+        let marker = Card {
+            suit: Suit::Oros,
+            value: Value::Sota,
+        };
+        let card = Card {
+            suit: Suit::Oros,
+            value: Value::Rey,
+        };
+        assert!(card.is_perica(marker));
+
+        let marker = Card {
+            suit: Suit::Oros,
+            value: Value::Uno,
+        };
+        let card = Card {
+            suit: Suit::Oros,
+            value: Value::Tres,
+        };
+        assert!(!card.is_perica(marker));
+
+        let marker = Card {
+            suit: Suit::Oros,
+            value: Value::Uno,
+        };
+        let card = Card {
+            suit: Suit::Bastos,
+            value: Value::Sota,
+        };
+        assert!(!card.is_perica(marker));
+    }
 }
