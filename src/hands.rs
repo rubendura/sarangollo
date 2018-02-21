@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use itertools::Itertools;
 use deck::{Card, Value};
 
@@ -47,6 +48,18 @@ impl Flor {
 
         // Flor is counted from 20 ¯\_(ツ)_/¯
         20 + total
+    }
+}
+
+impl Ord for Flor {
+    fn cmp(&self, other: &Flor) -> Ordering {
+        self.value().cmp(&other.value())
+    }
+}
+
+impl PartialOrd for Flor {
+    fn partial_cmp(&self, other: &Flor) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
@@ -353,6 +366,69 @@ mod tests {
         };
         let result = Flor::from_cards(hand, marker).unwrap().value();
         assert_eq!(result, 42);
+    }
+
+    #[test]
+    fn flor_sorting() {
+        let marker = Card {
+            suit: Suit::Oros,
+            value: Value::Uno,
+        };
+        let flor_42 = Flor::from_cards(
+            [
+                Card {
+                    suit: Suit::Oros,
+                    value: Value::Sota,
+                },
+                Card {
+                    suit: Suit::Oros,
+                    value: Value::Caballo,
+                },
+                Card {
+                    suit: Suit::Espadas,
+                    value: Value::Siete,
+                },
+            ],
+            marker,
+        ).unwrap();
+        let flor_20 = Flor::from_cards(
+            [
+                Card {
+                    suit: Suit::Bastos,
+                    value: Value::Sota,
+                },
+                Card {
+                    suit: Suit::Bastos,
+                    value: Value::Caballo,
+                },
+                Card {
+                    suit: Suit::Bastos,
+                    value: Value::Rey,
+                },
+            ],
+            marker,
+        ).unwrap();
+        let flor_35 = Flor::from_cards(
+            [
+                Card {
+                    suit: Suit::Oros,
+                    value: Value::Siete,
+                },
+                Card {
+                    suit: Suit::Oros,
+                    value: Value::Cinco,
+                },
+                Card {
+                    suit: Suit::Oros,
+                    value: Value::Tres,
+                },
+            ],
+            marker,
+        ).unwrap();
+        let mut flors = [&flor_42, &flor_20, &flor_35];
+        flors.sort();
+        let expected = [&flor_20, &flor_35, &flor_42];
+        assert_eq!(flors, expected);
     }
 
     #[test]
