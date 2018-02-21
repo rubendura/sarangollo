@@ -1,38 +1,53 @@
 use itertools::Itertools;
 use deck::{Card, Value};
 
-fn is_flor(cards: &[&Card; 3], marker: Card) -> bool {
-    cards
-        .iter()
-        .filter(|card| !card.is_perico(marker))
-        .filter(|card| !card.is_perica(marker))
-        .map(|card| card.suit)
-        .all_equal()
+#[derive(Debug, Eq, PartialEq)]
+struct Flor {
+    cards: [Card; 3],
+    marker: Card,
 }
 
-fn flor_value(cards: &[&Card; 3], marker: Card) -> Option<u8> {
-    if !is_flor(cards, marker) {
-        return None;
+impl Flor {
+    fn is_flor(cards: [Card; 3], marker: Card) -> bool {
+        cards
+            .iter()
+            .filter(|card| !card.is_perico(marker))
+            .filter(|card| !card.is_perica(marker))
+            .map(|card| card.suit)
+            .all_equal()
     }
 
-    let total: u8 = cards
-        .iter()
-        .map(|card| match card.value {
-            Value::Uno => 1,
-            Value::Dos => 2,
-            Value::Tres => 3,
-            Value::Cuatro => 4,
-            Value::Cinco => 5,
-            Value::Seis => 6,
-            Value::Siete => 7,
-            Value::Sota if card.is_perica(marker) => 7,
-            Value::Caballo if card.is_perico(marker) => 8,
-            _ => 0,
-        })
-        .sum();
+    fn from_cards(cards: [Card; 3], marker: Card) -> Option<Flor> {
+        if Flor::is_flor(cards, marker) {
+            Some(Flor {
+                cards: cards,
+                marker: marker,
+            })
+        } else {
+            None
+        }
+    }
 
-    // Flor is counted from 20 ¯\_(ツ)_/¯
-    Some(20 + total)
+    fn value(&self) -> u8 {
+        let total: u8 = self.cards
+            .iter()
+            .map(|card| match card.value {
+                Value::Uno => 1,
+                Value::Dos => 2,
+                Value::Tres => 3,
+                Value::Cuatro => 4,
+                Value::Cinco => 5,
+                Value::Seis => 6,
+                Value::Siete => 7,
+                Value::Sota if card.is_perica(self.marker) => 7,
+                Value::Caballo if card.is_perico(self.marker) => 8,
+                _ => 0,
+            })
+            .sum();
+
+        // Flor is counted from 20 ¯\_(ツ)_/¯
+        20 + total
+    }
 }
 
 fn is_secansa(cards: &[&Card; 3]) -> bool {
@@ -62,15 +77,15 @@ mod tests {
     #[test]
     fn is_flor_true() {
         let hand = [
-            &Card {
+            Card {
                 suit: Suit::Oros,
                 value: Value::Uno,
             },
-            &Card {
+            Card {
                 suit: Suit::Oros,
                 value: Value::Dos,
             },
-            &Card {
+            Card {
                 suit: Suit::Oros,
                 value: Value::Tres,
             },
@@ -79,21 +94,21 @@ mod tests {
             suit: Suit::Bastos,
             value: Value::Uno,
         };
-        assert!(is_flor(&hand, marker));
+        assert!(Flor::is_flor(hand, marker));
     }
 
     #[test]
     fn is_flor_false() {
         let hand = [
-            &Card {
+            Card {
                 suit: Suit::Oros,
                 value: Value::Uno,
             },
-            &Card {
+            Card {
                 suit: Suit::Oros,
                 value: Value::Dos,
             },
-            &Card {
+            Card {
                 suit: Suit::Bastos,
                 value: Value::Tres,
             },
@@ -102,21 +117,21 @@ mod tests {
             suit: Suit::Bastos,
             value: Value::Uno,
         };
-        assert!(!is_flor(&hand, marker));
+        assert!(!Flor::is_flor(hand, marker));
     }
 
     #[test]
     fn is_flor_false_perico() {
         let hand = [
-            &Card {
+            Card {
                 suit: Suit::Oros,
                 value: Value::Uno,
             },
-            &Card {
+            Card {
                 suit: Suit::Espadas,
                 value: Value::Dos,
             },
-            &Card {
+            Card {
                 suit: Suit::Bastos,
                 value: Value::Caballo,
             },
@@ -125,21 +140,21 @@ mod tests {
             suit: Suit::Bastos,
             value: Value::Uno,
         };
-        assert!(!is_flor(&hand, marker));
+        assert!(!Flor::is_flor(hand, marker));
     }
 
     #[test]
     fn is_flor_false_perica() {
         let hand = [
-            &Card {
+            Card {
                 suit: Suit::Oros,
                 value: Value::Uno,
             },
-            &Card {
+            Card {
                 suit: Suit::Bastos,
                 value: Value::Dos,
             },
-            &Card {
+            Card {
                 suit: Suit::Bastos,
                 value: Value::Sota,
             },
@@ -148,21 +163,21 @@ mod tests {
             suit: Suit::Bastos,
             value: Value::Uno,
         };
-        assert!(!is_flor(&hand, marker));
+        assert!(!Flor::is_flor(hand, marker));
     }
 
     #[test]
     fn is_flor_perico() {
         let hand = [
-            &Card {
+            Card {
                 suit: Suit::Oros,
                 value: Value::Uno,
             },
-            &Card {
+            Card {
                 suit: Suit::Oros,
                 value: Value::Dos,
             },
-            &Card {
+            Card {
                 suit: Suit::Bastos,
                 value: Value::Caballo,
             },
@@ -171,21 +186,21 @@ mod tests {
             suit: Suit::Bastos,
             value: Value::Uno,
         };
-        assert!(is_flor(&hand, marker));
+        assert!(Flor::is_flor(hand, marker));
     }
 
     #[test]
     fn is_flor_perica() {
         let hand = [
-            &Card {
+            Card {
                 suit: Suit::Oros,
                 value: Value::Uno,
             },
-            &Card {
+            Card {
                 suit: Suit::Oros,
                 value: Value::Dos,
             },
-            &Card {
+            Card {
                 suit: Suit::Bastos,
                 value: Value::Sota,
             },
@@ -194,21 +209,21 @@ mod tests {
             suit: Suit::Bastos,
             value: Value::Uno,
         };
-        assert!(is_flor(&hand, marker));
+        assert!(Flor::is_flor(hand, marker));
     }
 
     #[test]
     fn is_flor_perico_perica() {
         let hand = [
-            &Card {
+            Card {
                 suit: Suit::Oros,
                 value: Value::Uno,
             },
-            &Card {
+            Card {
                 suit: Suit::Bastos,
                 value: Value::Sota,
             },
-            &Card {
+            Card {
                 suit: Suit::Bastos,
                 value: Value::Caballo,
             },
@@ -217,21 +232,21 @@ mod tests {
             suit: Suit::Bastos,
             value: Value::Uno,
         };
-        assert!(is_flor(&hand, marker));
+        assert!(Flor::is_flor(hand, marker));
     }
 
     #[test]
-    fn flor_value_figures() {
+    fn flor_from_cards_some() {
         let hand = [
-            &Card {
+            Card {
                 suit: Suit::Oros,
                 value: Value::Sota,
             },
-            &Card {
+            Card {
                 suit: Suit::Oros,
                 value: Value::Caballo,
             },
-            &Card {
+            Card {
                 suit: Suit::Oros,
                 value: Value::Rey,
             },
@@ -240,22 +255,70 @@ mod tests {
             suit: Suit::Bastos,
             value: Value::Uno,
         };
-        let result = flor_value(&hand, marker);
-        assert_eq!(result, Some(20));
+        let result = Flor::from_cards(hand, marker);
+        assert!(result.is_some());
+    }
+
+    #[test]
+    fn flor_from_cards_none() {
+        let hand = [
+            Card {
+                suit: Suit::Oros,
+                value: Value::Sota,
+            },
+            Card {
+                suit: Suit::Oros,
+                value: Value::Caballo,
+            },
+            Card {
+                suit: Suit::Bastos,
+                value: Value::Rey,
+            },
+        ];
+        let marker = Card {
+            suit: Suit::Bastos,
+            value: Value::Uno,
+        };
+        let result = Flor::from_cards(hand, marker);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn flor_value_figures() {
+        let hand = [
+            Card {
+                suit: Suit::Oros,
+                value: Value::Sota,
+            },
+            Card {
+                suit: Suit::Oros,
+                value: Value::Caballo,
+            },
+            Card {
+                suit: Suit::Oros,
+                value: Value::Rey,
+            },
+        ];
+        let marker = Card {
+            suit: Suit::Bastos,
+            value: Value::Uno,
+        };
+        let result = Flor::from_cards(hand, marker).unwrap().value();
+        assert_eq!(result, 20);
     }
 
     #[test]
     fn flor_value_standard() {
         let hand = [
-            &Card {
+            Card {
                 suit: Suit::Oros,
                 value: Value::Siete,
             },
-            &Card {
+            Card {
                 suit: Suit::Oros,
                 value: Value::Cinco,
             },
-            &Card {
+            Card {
                 suit: Suit::Oros,
                 value: Value::Tres,
             },
@@ -264,46 +327,22 @@ mod tests {
             suit: Suit::Oros,
             value: Value::Uno,
         };
-        let result = flor_value(&hand, marker);
-        assert_eq!(result, Some(35));
-    }
-
-    #[test]
-    fn flor_value_no_flor() {
-        let hand = [
-            &Card {
-                suit: Suit::Oros,
-                value: Value::Siete,
-            },
-            &Card {
-                suit: Suit::Oros,
-                value: Value::Cinco,
-            },
-            &Card {
-                suit: Suit::Espadas,
-                value: Value::Tres,
-            },
-        ];
-        let marker = Card {
-            suit: Suit::Oros,
-            value: Value::Uno,
-        };
-        let result = flor_value(&hand, marker);
-        assert_eq!(result, None);
+        let result = Flor::from_cards(hand, marker).unwrap().value();
+        assert_eq!(result, 35);
     }
 
     #[test]
     fn flor_value_42() {
         let hand = [
-            &Card {
+            Card {
                 suit: Suit::Oros,
                 value: Value::Sota,
             },
-            &Card {
+            Card {
                 suit: Suit::Oros,
                 value: Value::Caballo,
             },
-            &Card {
+            Card {
                 suit: Suit::Espadas,
                 value: Value::Siete,
             },
@@ -312,8 +351,8 @@ mod tests {
             suit: Suit::Oros,
             value: Value::Uno,
         };
-        let result = flor_value(&hand, marker);
-        assert_eq!(result, Some(42));
+        let result = Flor::from_cards(hand, marker).unwrap().value();
+        assert_eq!(result, 42);
     }
 
     #[test]
