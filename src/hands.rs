@@ -70,23 +70,29 @@ struct Secansa {
 
 impl Secansa {
     fn is_secansa(cards: [Card; 3]) -> bool {
-        let values = cards.iter().map(|card| card.value).sorted();
-        let next_values = values.iter().filter_map(|value| value.next());
-        values
+        let mut sorted = cards.clone();
+        sorted.sort_by_key(|card| card.value);
+
+        let next_values = sorted.iter().filter_map(|card| card.value.next());
+
+        sorted
             .iter()
             .skip(1)
             .zip(next_values)
-            .any(|(value1, value2)| *value1 == value2)
+            .any(|(card, next_value)| card.value == next_value)
     }
 
     fn is_secansa_3_cards(&self) -> bool {
-        let values = self.cards.iter().map(|card| card.value).sorted();
-        let next_values = values.iter().filter_map(|value| value.next());
-        values
+        let mut sorted = self.cards.clone();
+        sorted.sort_by_key(|card| card.value);
+
+        let next_values = sorted.iter().filter_map(|card| card.value.next());
+
+        sorted
             .iter()
             .skip(1)
             .zip(next_values)
-            .all(|(value1, value2)| *value1 == value2)
+            .all(|(card, next_value)| card.value == next_value)
     }
 
     fn highest_card(&self) -> Card {
