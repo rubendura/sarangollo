@@ -65,55 +65,54 @@ impl PartialOrd for Flor {
 
 #[derive(Debug, Eq, PartialEq)]
 struct Secansa {
-    cards: [Card; 3],
+    cards: Vec<Card>,
 }
 
 impl Secansa {
-    fn is_secansa(cards: [Card; 3]) -> bool {
+    fn is_secansa_3_cards(&self) -> bool {
+        self.cards.len() == 3
+    }
+
+    fn highest_card(&self) -> &Card {
+        self.cards.last().unwrap()
+    }
+
+    fn sorted_secansa_cards(cards: [Card; 3]) -> Option<Vec<Card>> {
         let mut sorted = cards.clone();
         sorted.sort_by_key(|card| card.value);
 
-        let next_values = sorted.iter().filter_map(|card| card.value.next());
+        let mut res = Vec::new();
 
-        sorted
-            .iter()
-            .skip(1)
-            .zip(next_values)
-            .any(|(card, next_value)| card.value == next_value)
-    }
+        // If .next() returns None, card is a Rey.
+        // We can't form a secansa if first card of sorted hand is Rey
+        if let Some(value) = cards[0].value.next() {
+            if value == cards[1].value {
+                res.push(cards[0]);
+            }
+        } else {
+            return None;
+        }
 
-    fn is_secansa_3_cards(&self) -> bool {
-        let mut sorted = self.cards.clone();
-        sorted.sort_by_key(|card| card.value);
+        // On a sorted hand, if there is secansa, the middle cart will always be there
+        res.push(cards[1]);
 
-        let next_values = sorted.iter().filter_map(|card| card.value.next());
+        // If middle card is a Rey, we can't form secansa with the last card
+        if let Some(value) = cards[1].value.next() {
+            if value == cards[2].value {
+                res.push(cards[1]);
+            }
+        }
 
-        sorted
-            .iter()
-            .skip(1)
-            .zip(next_values)
-            .all(|(card, next_value)| card.value == next_value)
-    }
-
-    fn highest_card(&self) -> Card {
-        let mut sorted = self.cards.clone();
-        sorted.sort_by_key(|card| card.value);
-
-        let next_values = sorted.iter().filter_map(|card| card.value.next());
-
-        let result = sorted
-            .iter()
-            .skip(1)
-            .zip(next_values)
-            .filter(|&(card, next_value)| card.value == next_value)
-            .map(|(card, _)| *card)
-            .last()
-            .unwrap();
-        result
+        // If result vector only has 1 card, no secansa can be formed
+        if res.len() == 1 {
+            None
+        } else {
+            Some(res)
+        }
     }
 
     fn from_cards(cards: [Card; 3]) -> Option<Self> {
-        if Self::is_secansa(cards) {
+        if let Some(cards) = Self::sorted_secansa_cards(cards) {
             Some(Secansa { cards: cards })
         } else {
             None
@@ -515,7 +514,7 @@ mod tests {
                 value: Value::Tres,
             },
         ];
-        assert!(Secansa::is_secansa(hand));
+        assert!(Secansa::sorted_secansa_cards(hand).is_some());
 
         let hand = [
             Card {
@@ -531,7 +530,7 @@ mod tests {
                 value: Value::Rey,
             },
         ];
-        assert!(Secansa::is_secansa(hand));
+        assert!(Secansa::sorted_secansa_cards(hand).is_some());
     }
 
     #[test]
@@ -550,7 +549,7 @@ mod tests {
                 value: Value::Cuatro,
             },
         ];
-        assert!(Secansa::is_secansa(hand));
+        assert!(Secansa::sorted_secansa_cards(hand).is_some());
 
         let hand = [
             Card {
@@ -566,7 +565,7 @@ mod tests {
                 value: Value::Rey,
             },
         ];
-        assert!(Secansa::is_secansa(hand));
+        assert!(Secansa::sorted_secansa_cards(hand).is_some());
     }
 
     #[test]
@@ -585,7 +584,7 @@ mod tests {
                 value: Value::Cinco,
             },
         ];
-        assert!(!Secansa::is_secansa(hand));
+        assert!(Secansa::sorted_secansa_cards(hand).is_none());
 
         let hand = [
             Card {
@@ -601,7 +600,7 @@ mod tests {
                 value: Value::Rey,
             },
         ];
-        assert!(!Secansa::is_secansa(hand));
+        assert!(Secansa::sorted_secansa_cards(hand).is_none());
     }
 
     #[test]
@@ -644,86 +643,76 @@ mod tests {
 
     #[test]
     fn secansa_ordering() {
-        let secansa_3_cards = Secansa {
-            cards: [
-                Card {
-                    suit: Suit::Oros,
-                    value: Value::Uno,
-                },
-                Card {
-                    suit: Suit::Bastos,
-                    value: Value::Dos,
-                },
-                Card {
-                    suit: Suit::Espadas,
-                    value: Value::Tres,
-                },
-            ],
-        };
-        let secansa_real = Secansa {
-            cards: [
-                Card {
-                    suit: Suit::Oros,
-                    value: Value::Uno,
-                },
-                Card {
-                    suit: Suit::Bastos,
-                    value: Value::Dos,
-                },
-                Card {
-                    suit: Suit::Espadas,
-                    value: Value::Tres,
-                },
-            ],
-        };
-        let secansa_2_top = Secansa {
-            cards: [
-                Card {
-                    suit: Suit::Oros,
-                    value: Value::Sota,
-                },
-                Card {
-                    suit: Suit::Bastos,
-                    value: Value::Caballo,
-                },
-                Card {
-                    suit: Suit::Espadas,
-                    value: Value::Tres,
-                },
-            ],
-        };
-        let secansa_2_low = Secansa {
-            cards: [
-                Card {
-                    suit: Suit::Oros,
-                    value: Value::Dos,
-                },
-                Card {
-                    suit: Suit::Bastos,
-                    value: Value::Uno,
-                },
-                Card {
-                    suit: Suit::Espadas,
-                    value: Value::Cinco,
-                },
-            ],
-        };
-        let secansa_2_low_with_high_card = Secansa {
-            cards: [
-                Card {
-                    suit: Suit::Oros,
-                    value: Value::Dos,
-                },
-                Card {
-                    suit: Suit::Bastos,
-                    value: Value::Tres,
-                },
-                Card {
-                    suit: Suit::Espadas,
-                    value: Value::Rey,
-                },
-            ],
-        };
+        let secansa_3_cards = Secansa::from_cards([
+            Card {
+                suit: Suit::Oros,
+                value: Value::Uno,
+            },
+            Card {
+                suit: Suit::Bastos,
+                value: Value::Dos,
+            },
+            Card {
+                suit: Suit::Espadas,
+                value: Value::Tres,
+            },
+        ]);
+        let secansa_real = Secansa::from_cards([
+            Card {
+                suit: Suit::Oros,
+                value: Value::Uno,
+            },
+            Card {
+                suit: Suit::Bastos,
+                value: Value::Dos,
+            },
+            Card {
+                suit: Suit::Espadas,
+                value: Value::Tres,
+            },
+        ]);
+        let secansa_2_top = Secansa::from_cards([
+            Card {
+                suit: Suit::Oros,
+                value: Value::Sota,
+            },
+            Card {
+                suit: Suit::Bastos,
+                value: Value::Caballo,
+            },
+            Card {
+                suit: Suit::Espadas,
+                value: Value::Tres,
+            },
+        ]);
+        let secansa_2_low = Secansa::from_cards([
+            Card {
+                suit: Suit::Oros,
+                value: Value::Dos,
+            },
+            Card {
+                suit: Suit::Bastos,
+                value: Value::Uno,
+            },
+            Card {
+                suit: Suit::Espadas,
+                value: Value::Cinco,
+            },
+        ]);
+        let secansa_2_low_with_high_card = Secansa::from_cards([
+            Card {
+                suit: Suit::Oros,
+                value: Value::Dos,
+            },
+            Card {
+                suit: Suit::Bastos,
+                value: Value::Tres,
+            },
+            Card {
+                suit: Suit::Espadas,
+                value: Value::Rey,
+            },
+        ]);
         let expected = [
             &secansa_2_low,
             &secansa_2_low_with_high_card,
