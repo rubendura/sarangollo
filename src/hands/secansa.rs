@@ -19,33 +19,24 @@ impl Secansa {
         let mut sorted = cards;
         sorted.sort_by_key(|card| card.value);
 
-        let mut res = Vec::new();
+        let mut cards = sorted
+            .iter()
+            // zip with next card
+            .zip(sorted.iter().skip(1))
+            // filter consecutive values
+            .filter(|&(card, next_card)| card.value.next() == Some(next_card.value))
+            // take both cards if they are consecutive
+            .flat_map(|(card, next_card)| vec![*card, *next_card])
+            .collect::<Vec<_>>();
 
-        // If .next() returns None, card is a Rey.
-        // We can't form a secansa if first card of sorted hand is Rey
-        if let Some(value) = cards[0].value.next() {
-            if value == cards[1].value {
-                res.push(cards[0]);
-            }
-        } else {
-            return None;
-        }
-
-        // On a sorted hand, if there is secansa, the middle cart will always be there
-        res.push(cards[1]);
-
-        // If middle card is a Rey, we can't form secansa with the last card
-        if let Some(value) = cards[1].value.next() {
-            if value == cards[2].value {
-                res.push(cards[1]);
-            }
-        }
+        // dedup cards
+        cards.dedup();
 
         // If result vector only has 1 card, no secansa can be formed
-        if res.len() == 1 {
-            None
+        if cards.len() >= 2 {
+            Some(cards)
         } else {
-            Some(res)
+            None
         }
     }
 
