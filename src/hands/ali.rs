@@ -7,7 +7,6 @@ struct Ali {
 
 impl Ali {
     fn from_cards(cards: [Card; 3]) -> Option<Self> {
-        // if let Some(cards) = Self::ali_cards(cards);
         cards
             .into_iter()
             .sorted_by_key(|card| card.value)
