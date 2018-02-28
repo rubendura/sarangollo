@@ -19,6 +19,10 @@ impl Ali {
             .max_by_key(|group| group.len())
             .map(|group| Self { cards: group })
     }
+
+    fn is_ali_3_cards(&self) -> bool {
+        self.cards.len() == 3
+    }
 }
 
 #[cfg(test)]
@@ -129,5 +133,43 @@ mod tests {
             },
         ];
         assert!(Ali::from_cards(hand).is_none());
+    }
+
+    #[test]
+    fn is_ali_3_cards_true() {
+        let hand = [
+            Card {
+                suit: Suit::Oros,
+                value: Value::Uno,
+            },
+            Card {
+                suit: Suit::Bastos,
+                value: Value::Uno,
+            },
+            Card {
+                suit: Suit::Espadas,
+                value: Value::Uno,
+            },
+        ];
+        assert!(Ali::from_cards(hand).unwrap().is_ali_3_cards());
+    }
+
+    #[test]
+    fn is_ali_3_cards_false() {
+        let hand = [
+            Card {
+                suit: Suit::Oros,
+                value: Value::Rey,
+            },
+            Card {
+                suit: Suit::Bastos,
+                value: Value::Cuatro,
+            },
+            Card {
+                suit: Suit::Espadas,
+                value: Value::Cuatro,
+            },
+        ];
+        assert!(!Ali::from_cards(hand).unwrap().is_ali_3_cards());
     }
 }
