@@ -1,13 +1,24 @@
 use itertools::Itertools;
 use deck::Card;
 
-fn is_ali(cards: &[&Card; 3]) -> bool {
-    let values = cards.iter().map(|card| card.value).sorted();
-    values
-        .iter()
-        .skip(1)
-        .zip(values.iter())
-        .any(|(value1, value2)| value1 == value2)
+struct Ali {
+    cards: Vec<Card>,
+}
+
+impl Ali {
+    fn from_cards(cards: [Card; 3]) -> Option<Self> {
+        // if let Some(cards) = Self::ali_cards(cards);
+        cards
+            .into_iter()
+            .sorted_by_key(|card| card.value)
+            .into_iter()
+            .group_by(|card| card.value)
+            .into_iter()
+            .map(|(_, group)| group.cloned().collect::<Vec<_>>())
+            .filter(|group| group.len() >= 2)
+            .max_by_key(|group| group.len())
+            .map(|group| Self { cards: group })
+    }
 }
 
 #[cfg(test)]
@@ -18,105 +29,105 @@ mod tests {
     #[test]
     fn is_ali_3_true() {
         let hand = [
-            &Card {
+            Card {
                 suit: Suit::Oros,
                 value: Value::Uno,
             },
-            &Card {
+            Card {
                 suit: Suit::Bastos,
                 value: Value::Uno,
             },
-            &Card {
+            Card {
                 suit: Suit::Espadas,
                 value: Value::Uno,
             },
         ];
-        assert!(is_ali(&hand));
+        assert!(Ali::from_cards(hand).is_some());
 
         let hand = [
-            &Card {
+            Card {
                 suit: Suit::Copas,
                 value: Value::Rey,
             },
-            &Card {
+            Card {
                 suit: Suit::Bastos,
                 value: Value::Rey,
             },
-            &Card {
+            Card {
                 suit: Suit::Espadas,
                 value: Value::Rey,
             },
         ];
-        assert!(is_ali(&hand));
+        assert!(Ali::from_cards(hand).is_some());
     }
 
     #[test]
     fn is_ali_2_true() {
         let hand = [
-            &Card {
+            Card {
                 suit: Suit::Oros,
                 value: Value::Uno,
             },
-            &Card {
+            Card {
                 suit: Suit::Bastos,
                 value: Value::Uno,
             },
-            &Card {
+            Card {
                 suit: Suit::Oros,
                 value: Value::Cuatro,
             },
         ];
-        assert!(is_ali(&hand));
+        assert!(Ali::from_cards(hand).is_some());
 
         let hand = [
-            &Card {
+            Card {
                 suit: Suit::Copas,
                 value: Value::Siete,
             },
-            &Card {
+            Card {
                 suit: Suit::Bastos,
                 value: Value::Rey,
             },
-            &Card {
+            Card {
                 suit: Suit::Copas,
                 value: Value::Rey,
             },
         ];
-        assert!(is_ali(&hand));
+        assert!(Ali::from_cards(hand).is_some());
     }
 
     #[test]
     fn is_ali_false() {
         let hand = [
-            &Card {
+            Card {
                 suit: Suit::Oros,
                 value: Value::Uno,
             },
-            &Card {
+            Card {
                 suit: Suit::Bastos,
                 value: Value::Tres,
             },
-            &Card {
+            Card {
                 suit: Suit::Espadas,
                 value: Value::Cinco,
             },
         ];
-        assert!(!is_ali(&hand));
+        assert!(Ali::from_cards(hand).is_none());
 
         let hand = [
-            &Card {
+            Card {
                 suit: Suit::Copas,
                 value: Value::Caballo,
             },
-            &Card {
+            Card {
                 suit: Suit::Bastos,
                 value: Value::Sota,
             },
-            &Card {
+            Card {
                 suit: Suit::Espadas,
                 value: Value::Rey,
             },
         ];
-        assert!(!is_ali(&hand));
+        assert!(Ali::from_cards(hand).is_none());
     }
 }
