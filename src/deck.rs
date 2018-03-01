@@ -1,3 +1,5 @@
+use rand::{self, Rng};
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Suit {
     Bastos,
@@ -80,15 +82,19 @@ impl Card {
     }
 }
 
+#[derive(Clone, Eq, PartialEq)]
 pub struct Deck {
     cards: Vec<Card>,
 }
 
 impl Deck {
-    fn draw_top(&mut self) -> Option<Card> {
+    pub fn draw(&mut self) -> Option<Card> {
         self.cards.pop()
     }
-    fn shuffle(&mut self) {}
+    fn shuffle(&mut self) {
+        let mut rng = rand::thread_rng();
+        rng.shuffle(&mut self.cards);
+    }
 }
 
 impl Default for Deck {
@@ -192,5 +198,13 @@ mod tests {
             value: Value::Sota,
         };
         assert!(!card.is_perica(marker));
+    }
+
+    #[test]
+    fn shuffle() {
+        let deck: Deck = Default::default();
+        let mut deck2 = deck.clone();
+        deck2.shuffle();
+        assert!(deck != deck2);
     }
 }

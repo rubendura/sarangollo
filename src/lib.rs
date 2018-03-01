@@ -1,5 +1,6 @@
 #[macro_use]
 extern crate itertools;
+extern crate rand;
 
 mod deck;
 pub mod scoreboard;

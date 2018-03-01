@@ -5,3 +5,4 @@ authors = ["Rubén Durá Tarí <rubendura@gmail.com>"]
 
 [dependencies]
 itertools = "0.7.6"
+rand = "0.4"
