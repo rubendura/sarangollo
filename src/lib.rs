@@ -98,7 +98,7 @@ impl<'p> PlayerPiles<'p> {
 }
 
 struct GameRoundState<'p> {
-    deck: deck::SpanishDeck,
+    deck: deck::Deck,
     player_piles: Vec<PlayerPiles<'p>>,
 }
 

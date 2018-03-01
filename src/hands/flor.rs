@@ -66,7 +66,7 @@ impl PartialOrd for Flor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use deck::spanish_deck::{Suit, Value};
+    use deck::{Suit, Value};
 
     #[test]
     fn is_flor_true() {
