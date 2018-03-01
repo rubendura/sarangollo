@@ -7,12 +7,6 @@ pub struct Scoreboard {
 }
 
 impl Scoreboard {
-    pub fn new() -> Scoreboard {
-        let mut scoreboard = Scoreboard { cotos: Vec::new() };
-        scoreboard.start_coto();
-        scoreboard
-    }
-
     pub fn annotate(&mut self, round_score: RoundScore) {
         //! Annotate a round on the scoreboard and perform management tasks to rotate camas and cotos when required
 
@@ -54,6 +48,14 @@ impl Scoreboard {
         self.cotos
             .last_mut()
             .expect("Scoreboard not properly initialised")
+    }
+}
+
+impl Default for Scoreboard {
+    fn default() -> Self {
+        let mut scoreboard = Scoreboard { cotos: Vec::new() };
+        scoreboard.start_coto();
+        scoreboard
     }
 }
 
@@ -219,7 +221,7 @@ mod tests {
 
     #[test]
     fn scoreboard_get_current_coto() {
-        let mut scoreboard = Scoreboard::new();
+        let mut scoreboard: Scoreboard = Default::default();
         scoreboard.get_current_coto().start_cama();
         let coto1 = scoreboard.get_current_coto().clone();
         scoreboard.start_coto();
@@ -236,14 +238,14 @@ mod tests {
 
     #[test]
     fn scoreboard_new() {
-        let scoreboard = Scoreboard::new();
+        let scoreboard: Scoreboard = Default::default();
         assert!(!scoreboard.cotos.is_empty());
         assert!(!scoreboard.cotos.first().unwrap().cames.is_empty());
     }
 
     #[test]
     fn scoreboard_annotate_writes_round_score() {
-        let mut scoreboard = Scoreboard::new();
+        let mut scoreboard: Scoreboard = Default::default();
         scoreboard.annotate(RoundScore {
             rey: None,
             flor: None,
@@ -260,7 +262,7 @@ mod tests {
 
     #[test]
     fn scoreboard_annotate_rotates_camas() {
-        let mut scoreboard = Scoreboard::new();
+        let mut scoreboard: Scoreboard = Default::default();
         scoreboard.annotate(RoundScore {
             rey: None,
             flor: None,
@@ -281,7 +283,7 @@ mod tests {
 
     #[test]
     fn scoreboard_annotate_rotates_cotos() {
-        let mut scoreboard = Scoreboard::new();
+        let mut scoreboard: Scoreboard = Default::default();
         scoreboard.annotate(RoundScore {
             rey: None,
             flor: None,
@@ -309,7 +311,7 @@ mod tests {
 
     #[test]
     fn scoreboard_winner() {
-        let mut scoreboard = Scoreboard::new();
+        let mut scoreboard: Scoreboard = Default::default();
         assert!(scoreboard.winner().is_none());
 
         fn annotate(scoreboard: &mut Scoreboard, team: Team) {

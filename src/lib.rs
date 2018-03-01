@@ -29,7 +29,7 @@ impl Game {
         Game {
             team1: vec![],
             team2: vec![],
-            scoreboard: Scoreboard::new(),
+            scoreboard: Default::default(),
         }
     }
 
@@ -148,7 +148,7 @@ mod tests {
         let mut game = Game {
             team1: vec![],
             team2: vec![],
-            scoreboard: Scoreboard::new(),
+            scoreboard: Default::default(),
         };
         let player = Player {
             name: "Ruben".into(),
@@ -170,7 +170,7 @@ mod tests {
                 },
             ],
             team2: vec![],
-            scoreboard: Scoreboard::new(),
+            scoreboard: Default::default(),
         };
         let success = game.join(player, Team::Team2);
         assert!(success.is_ok());
@@ -196,7 +196,7 @@ mod tests {
                 },
             ],
             team2: vec![],
-            scoreboard: Scoreboard::new(),
+            scoreboard: Default::default(),
         };
         let success = game.join(player, Team::Team1);
         assert!(success.is_err());
@@ -216,7 +216,7 @@ mod tests {
                 },
             ],
             team2: vec![],
-            scoreboard: Scoreboard::new(),
+            scoreboard: Default::default(),
         };
         let success = game.join(player, Team::Team1);
         assert!(success.is_ok());
