@@ -48,6 +48,23 @@ impl<'a> Seat<'a> {
             Team::Team2
         }
     }
+
+    fn discard(&mut self, card: deck::Card) -> Option<deck::Card> {
+        if let Some(pos) = self.hand.iter().position(|x| *x == card) {
+            Some(self.hand.remove(pos))
+        } else {
+            None
+        }
+    }
+
+    fn show_card(&mut self, card: deck::Card) -> Option<deck::Card> {
+        if let Some(_) = self.discard(card) {
+            self.face_up_cards.push(card);
+            Some(card)
+        } else {
+            None
+        }
+    }
 }
 
 struct Game {
@@ -169,6 +186,85 @@ mod tests {
             assert_eq!(round.seats[i].hand.len(), 6);
             assert_eq!(round.seats[i].face_up_cards.len(), 0);
         }
+    }
+
+    #[test]
+    fn discard_bad_card() {
+        let mut seat = Seat {
+            player: &Player::new("a"),
+            hand: vec![
+                deck::Card {
+                    suit: deck::Suit::Bastos,
+                    value: deck::Value::Caballo,
+                },
+            ],
+            face_up_cards: Vec::new(),
+        };
+        let result = seat.discard(deck::Card {
+            suit: deck::Suit::Bastos,
+            value: deck::Value::Cinco,
+        });
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn discard_ok() {
+        let card = deck::Card {
+            suit: deck::Suit::Bastos,
+            value: deck::Value::Caballo,
+        };
+        let mut seat = Seat {
+            player: &Player::new("a"),
+            hand: vec![card],
+            face_up_cards: Vec::new(),
+        };
+        let result = seat.discard(deck::Card {
+            suit: deck::Suit::Bastos,
+            value: deck::Value::Caballo,
+        });
+        assert!(result.is_some());
+        assert_eq!(result.unwrap(), card);
+    }
+
+    #[test]
+    fn show_bad_card() {
+        let mut seat = Seat {
+            player: &Player::new("a"),
+            hand: vec![
+                deck::Card {
+                    suit: deck::Suit::Bastos,
+                    value: deck::Value::Caballo,
+                },
+            ],
+            face_up_cards: Vec::new(),
+        };
+        let result = seat.show_card(deck::Card {
+            suit: deck::Suit::Bastos,
+            value: deck::Value::Cinco,
+        });
+        assert!(result.is_none());
+        assert!(seat.face_up_cards.is_empty());
+    }
+
+    #[test]
+    fn show_card_ok() {
+        let card = deck::Card {
+            suit: deck::Suit::Bastos,
+            value: deck::Value::Caballo,
+        };
+        let mut seat = Seat {
+            player: &Player::new("a"),
+            hand: vec![card],
+            face_up_cards: Vec::new(),
+        };
+        let result = seat.show_card(deck::Card {
+            suit: deck::Suit::Bastos,
+            value: deck::Value::Caballo,
+        });
+        assert!(result.is_some());
+        assert_eq!(result.unwrap(), card);
+        assert_eq!(seat.face_up_cards.len(), 1);
+        assert!(seat.face_up_cards.contains(&card));
     }
 
 }
