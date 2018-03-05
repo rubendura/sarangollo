@@ -105,6 +105,10 @@ impl<'a> Round<'a> {
             }
         }
     }
+
+    fn is_finished(&self) -> bool {
+        self.seats.iter().all(|seat| seat.hand.is_empty())
+    }
 }
 
 #[cfg(test)]
@@ -265,6 +269,28 @@ mod tests {
         assert_eq!(result.unwrap(), card);
         assert_eq!(seat.face_up_cards.len(), 1);
         assert!(seat.face_up_cards.contains(&card));
+    }
+
+    #[test]
+    fn is_round_finished() {
+        let game = Game {
+            players: vec![
+                Player::new("a"),
+                Player::new("b"),
+                Player::new("c"),
+                Player::new("d"),
+                Player::new("e"),
+                Player::new("f"),
+            ],
+        };
+        let mut round = Round::new(&game, &game.players[0], deck::Deck::default());
+        round.seats[0].hand.push(deck::Card {
+            suit: deck::Suit::Bastos,
+            value: deck::Value::Caballo,
+        });
+        assert!(!round.is_finished());
+        round.seats[0].hand.clear();
+        assert!(round.is_finished());
     }
 
 }
