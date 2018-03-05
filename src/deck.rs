@@ -96,6 +96,10 @@ impl Deck {
         let mut rng = rand::thread_rng();
         rng.shuffle(&mut self.cards);
     }
+
+    pub fn remaining_cards(&self) -> usize {
+        self.cards.len()
+    }
 }
 
 impl Default for Deck {
@@ -204,5 +208,19 @@ mod tests {
         let mut deck2 = deck.clone();
         deck2.shuffle();
         assert!(deck != deck2);
+    }
+
+    #[test]
+    fn remaining_cards() {
+        let mut deck: Deck = Default::default();
+        assert_eq!(deck.remaining_cards(), 40);
+        for _ in 0..35 {
+            deck.draw();
+        }
+        assert_eq!(deck.remaining_cards(), 5);
+        for _ in 0..5 {
+            deck.draw();
+        }
+        assert_eq!(deck.remaining_cards(), 0);
     }
 }
