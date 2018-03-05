@@ -6,101 +6,10 @@ mod deck;
 pub mod scoreboard;
 mod hands;
 
-use scoreboard::Scoreboard;
-
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum Team {
     Team1,
     Team2,
-}
-
-#[derive(Debug)]
-struct Game {
-    team1: Vec<Player>,
-    team2: Vec<Player>,
-    scoreboard: Scoreboard,
-}
-
-enum JoinError {
-    FullTeam(Team),
-}
-
-impl Game {
-    fn new() -> Self {
-        Game {
-            team1: vec![],
-            team2: vec![],
-            scoreboard: Default::default(),
-        }
-    }
-
-    fn join(&mut self, player: Player, team: Team) -> Result<(), JoinError> {
-        let (chosen_team, other_team) = match team {
-            Team::Team1 => (&mut self.team1, &mut self.team2),
-            Team::Team2 => (&mut self.team2, &mut self.team1),
-        };
-
-        // If player already belongs to team we're done
-        if chosen_team.contains(&player) {
-            return Ok(());
-        }
-
-        // Teams are composed of three players. Not sure this is the best way to enforce this.
-        if chosen_team.len() >= 3 {
-            return Err(JoinError::FullTeam(team));
-        }
-
-        // If player was already in the other team, remove it from there
-        let pos = other_team.iter().position(|x| *x == player);
-        if let Some(pos) = pos {
-            other_team.remove(pos);
-        }
-
-        // Finally add player to team
-        chosen_team.push(player);
-
-        Ok(())
-    }
-}
-
-struct PlayerPiles<'p> {
-    player: &'p Player,
-    hand: Vec<deck::Card>,
-    up_facing: Vec<deck::Card>,
-}
-
-impl<'p> PlayerPiles<'p> {
-    fn new(player: &'p Player) -> PlayerPiles<'p> {
-        PlayerPiles {
-            player: player,
-            hand: vec![],
-            up_facing: vec![],
-        }
-    }
-
-    fn deal(&mut self, cards: Vec<deck::Card>) {
-        self.hand = cards;
-    }
-
-    fn discard(&mut self, card: deck::Card) {
-        let pos = self.hand.iter().position(|x| *x == card);
-        if let Some(pos) = pos {
-            self.hand.remove(pos);
-        }
-    }
-
-    fn show(&mut self, card: deck::Card) {
-        let pos = self.hand.iter().position(|&x| x == card);
-        if let Some(pos) = pos {
-            self.hand.remove(pos);
-            self.up_facing.push(card);
-        }
-    }
-}
-
-struct GameRoundState<'p> {
-    deck: deck::Deck,
-    player_piles: Vec<PlayerPiles<'p>>,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -108,121 +17,158 @@ struct Player {
     name: String,
 }
 
+impl Player {
+    fn new(name: &str) -> Self {
+        Self {
+            name: name.to_owned(),
+        }
+    }
+}
+
+#[derive(Clone)]
+struct Seat<'a> {
+    player: &'a Player,
+    hand: Vec<deck::Card>,
+    face_up_cards: Vec<deck::Card>,
+}
+
+impl<'a> Seat<'a> {
+    fn new(player: &'a Player) -> Self {
+        Self {
+            player,
+            hand: Vec::default(),
+            face_up_cards: Vec::default(),
+        }
+    }
+
+    fn get_team(&self, seat_number: u8) -> Team {
+        if seat_number % 2 == 0 {
+            Team::Team1
+        } else {
+            Team::Team2
+        }
+    }
+}
+
+struct Game {
+    players: Vec<Player>,
+}
+
+struct Round<'a> {
+    seats: Vec<Seat<'a>>,
+    dealer: &'a Player,
+    deck: deck::Deck,
+    marker: deck::Card,
+}
+
+impl<'a> Round<'a> {
+    fn new(game: &'a Game, dealer: &'a Player, mut deck: deck::Deck) -> Self {
+        let seats = game.players.iter().map(Seat::new).collect();
+        Self {
+            seats,
+            dealer,
+            marker: deck.draw().unwrap(),
+            deck,
+        }
+    }
+
+    fn dealer_position(&self) -> usize {
+        self.seats
+            .iter()
+            .position(|seat| seat.player == self.dealer)
+            .expect("Round not properly set up: dealer is not seated")
+    }
+
+    fn deal(&mut self, num_cards: usize) {
+        for _ in 0..num_cards {
+            for seat in &mut self.seats {
+                if let Some(card) = self.deck.draw() {
+                    seat.hand.push(card);
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn discard_card_from_hand() {
-        let player = Player {
-            name: "Ruben".to_string(),
-        };
-        let mut piles = PlayerPiles::new(&player);
-        let card = deck::Card {
-            suit: deck::Suit::Bastos,
-            value: deck::Value::Caballo,
-        };
-        piles.deal(vec![card]);
-        piles.discard(card);
-        assert_eq!(piles.hand, vec![]);
-        assert_eq!(piles.up_facing, vec![]);
+    fn seat_get_team() {
+        let player = Player::new("a");
+        let seat = Seat::new(&player);
+        assert_eq!(seat.get_team(0), Team::Team1);
+        assert_eq!(seat.get_team(1), Team::Team2);
+        assert_eq!(seat.get_team(2), Team::Team1);
+        assert_eq!(seat.get_team(3), Team::Team2);
+        assert_eq!(seat.get_team(4), Team::Team1);
+        assert_eq!(seat.get_team(5), Team::Team2);
     }
 
     #[test]
-    fn show_card_from_hand() {
-        let player = Player {
-            name: "Ruben".to_string(),
-        };
-        let mut piles = PlayerPiles::new(&player);
-        let card = deck::Card {
-            suit: deck::Suit::Bastos,
-            value: deck::Value::Caballo,
-        };
-        piles.deal(vec![card]);
-        piles.show(card);
-        assert_eq!(piles.hand, vec![]);
-        assert_eq!(piles.up_facing, vec![card]);
-    }
-
-    #[test]
-    fn join_team() {
-        let mut game = Game {
-            team1: vec![],
-            team2: vec![],
-            scoreboard: Default::default(),
-        };
-        let player = Player {
-            name: "Ruben".into(),
-        };
-        let success = game.join(player, Team::Team1);
-        assert!(success.is_ok());
-        assert_eq!(game.team1.len(), 1);
-    }
-
-    #[test]
-    fn join_team_move() {
-        let player = Player {
-            name: "Ruben".into(),
-        };
-        let mut game = Game {
-            team1: vec![
-                Player {
-                    name: "Ruben".into(),
-                },
+    fn round_new() {
+        let game = Game {
+            players: vec![
+                Player::new("a"),
+                Player::new("b"),
+                Player::new("c"),
+                Player::new("d"),
+                Player::new("e"),
+                Player::new("f"),
             ],
-            team2: vec![],
-            scoreboard: Default::default(),
         };
-        let success = game.join(player, Team::Team2);
-        assert!(success.is_ok());
-        assert_eq!(game.team1.len(), 0);
-        assert_eq!(game.team2.len(), 1);
+        let mut round = Round::new(&game, &game.players[0], deck::Deck::default());
+        assert_eq!(round.deck.remaining_cards(), 39);
+        let mut cards = Vec::default();
+        while let Some(card) = round.deck.draw() {
+            cards.push(card);
+        }
+        assert!(!cards.contains(&round.marker));
     }
 
     #[test]
-    fn join_team_full() {
-        let player = Player {
-            name: "Ruben".into(),
-        };
-        let mut game = Game {
-            team1: vec![
-                Player {
-                    name: "Roser".into(),
-                },
-                Player {
-                    name: "Whisky".into(),
-                },
-                Player {
-                    name: "Rateta".into(),
-                },
+    fn dealer_position() {
+        let game = Game {
+            players: vec![
+                Player::new("a"),
+                Player::new("b"),
+                Player::new("c"),
+                Player::new("d"),
+                Player::new("e"),
+                Player::new("f"),
             ],
-            team2: vec![],
-            scoreboard: Default::default(),
         };
-        let success = game.join(player, Team::Team1);
-        assert!(success.is_err());
-        assert_eq!(game.team1.len(), 3);
-        assert_eq!(game.team2.len(), 0);
+        let deck = deck::Deck::default();
+        for i in 0..6 {
+            let round = Round::new(&game, &game.players[i], deck.clone());
+            assert_eq!(round.dealer_position(), i);
+        }
     }
 
     #[test]
-    fn join_team_existing() {
-        let player = Player {
-            name: "Ruben".into(),
-        };
-        let mut game = Game {
-            team1: vec![
-                Player {
-                    name: "Ruben".into(),
-                },
+    fn round_deal() {
+        let game = Game {
+            players: vec![
+                Player::new("a"),
+                Player::new("b"),
+                Player::new("c"),
+                Player::new("d"),
+                Player::new("e"),
+                Player::new("f"),
             ],
-            team2: vec![],
-            scoreboard: Default::default(),
         };
-        let success = game.join(player, Team::Team1);
-        assert!(success.is_ok());
-        assert_eq!(game.team1.len(), 1);
-        assert_eq!(game.team2.len(), 0);
+        let mut round = Round::new(&game, &game.players[0], deck::Deck::default());
+        for i in 0..6 {
+            assert_eq!(round.seats[i].hand.len(), 0);
+            assert_eq!(round.seats[i].face_up_cards.len(), 0);
+        }
+        const num_cards: usize = 6;
+        round.deal(num_cards);
+        for i in 0..6 {
+            assert_eq!(round.seats[i].hand.len(), 6);
+            assert_eq!(round.seats[i].face_up_cards.len(), 0);
+        }
     }
 
 }
