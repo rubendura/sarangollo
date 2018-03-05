@@ -91,6 +91,7 @@ impl Deck {
     pub fn draw(&mut self) -> Option<Card> {
         self.cards.pop()
     }
+
     fn shuffle(&mut self) {
         let mut rng = rand::thread_rng();
         rng.shuffle(&mut self.cards);
@@ -101,12 +102,9 @@ impl Default for Deck {
     fn default() -> Self {
         let mut cards = vec![];
         for (&suit, &value) in iproduct!(SUITS.into_iter(), VALUES.into_iter()) {
-            cards.push(Card {
-                suit: suit,
-                value: value,
-            })
+            cards.push(Card { suit, value })
         }
-        Self { cards: cards }
+        Self { cards }
     }
 }
 

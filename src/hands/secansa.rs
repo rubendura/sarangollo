@@ -42,7 +42,7 @@ impl Secansa {
 
     fn from_cards(cards: [Card; 3]) -> Option<Self> {
         if let Some(cards) = Self::sorted_secansa_cards(cards) {
-            Some(Secansa { cards: cards })
+            Some(Secansa { cards })
         } else {
             None
         }

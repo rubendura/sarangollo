@@ -20,10 +20,7 @@ impl Flor {
 
     fn from_cards(cards: [Card; 3], marker: Card) -> Option<Self> {
         if Self::is_flor(cards, marker) {
-            Some(Flor {
-                cards: cards,
-                marker: marker,
-            })
+            Some(Flor { cards, marker })
         } else {
             None
         }
