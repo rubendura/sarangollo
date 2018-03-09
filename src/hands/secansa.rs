@@ -2,8 +2,15 @@ use std::cmp::Ordering;
 use deck::Card;
 
 #[derive(Debug, Eq, PartialEq)]
-struct Secansa {
+pub struct Secansa {
     cards: Vec<Card>,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum Bet {
+    Announced,
+    Envit,
+    Val(u8),
 }
 
 impl Secansa {
