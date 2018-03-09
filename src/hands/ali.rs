@@ -3,7 +3,7 @@ use itertools::Itertools;
 use deck::{Card, Value};
 
 #[derive(Debug, Eq, PartialEq)]
-struct Ali {
+pub struct Ali {
     cards: Vec<Card>,
 }
 
