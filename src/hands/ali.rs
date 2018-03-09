@@ -7,6 +7,13 @@ pub struct Ali {
     cards: Vec<Card>,
 }
 
+#[derive(Debug, Copy, Clone)]
+pub enum Bet {
+    Announced,
+    Envit,
+    Val(u8),
+}
+
 impl Ali {
     pub fn from_cards(cards: &[Card]) -> Option<Self> {
         cards
