@@ -8,6 +8,13 @@ pub struct Flor<'a> {
     marker: Card,
 }
 
+#[derive(Debug, Copy, Clone)]
+pub enum Bet {
+    Announced,
+    Envit,
+    Resto,
+}
+
 impl<'a> Flor<'a> {
     fn is_flor(cards: &[Card], marker: Card) -> bool {
         if cards.len() != 3 {
