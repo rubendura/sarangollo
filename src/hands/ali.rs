@@ -24,6 +24,18 @@ impl Ali {
     fn is_ali_3_cards(&self) -> bool {
         self.cards.len() == 3
     }
+
+    fn is_ali_aces(&self) -> bool {
+        self.cards.iter().all(|card| card.value == Value::Uno)
+    }
+
+    pub fn score(&self) -> u8 {
+        match (self.is_ali_3_cards(), self.is_ali_aces()) {
+            (true, true) => 6,
+            (true, false) | (false, true) => 3,
+            (false, false) => 1,
+        }
+    }
 }
 
 impl Ord for Ali {
@@ -199,6 +211,82 @@ mod tests {
             },
         ];
         assert!(!Ali::from_cards(&hand).unwrap().is_ali_3_cards());
+    }
+
+    #[test]
+    fn ali_score_2_cards() {
+        let hand = [
+            Card {
+                suit: Suit::Oros,
+                value: Value::Rey,
+            },
+            Card {
+                suit: Suit::Bastos,
+                value: Value::Cuatro,
+            },
+            Card {
+                suit: Suit::Espadas,
+                value: Value::Cuatro,
+            },
+        ];
+        assert_eq!(Ali::from_cards(&hand).unwrap().score(), 1);
+    }
+
+    #[test]
+    fn ali_score_2_aces() {
+        let hand = [
+            Card {
+                suit: Suit::Oros,
+                value: Value::Rey,
+            },
+            Card {
+                suit: Suit::Bastos,
+                value: Value::Uno,
+            },
+            Card {
+                suit: Suit::Espadas,
+                value: Value::Uno,
+            },
+        ];
+        assert_eq!(Ali::from_cards(&hand).unwrap().score(), 3);
+    }
+
+    #[test]
+    fn ali_score_3_cards() {
+        let hand = [
+            Card {
+                suit: Suit::Oros,
+                value: Value::Cuatro,
+            },
+            Card {
+                suit: Suit::Bastos,
+                value: Value::Cuatro,
+            },
+            Card {
+                suit: Suit::Espadas,
+                value: Value::Cuatro,
+            },
+        ];
+        assert_eq!(Ali::from_cards(&hand).unwrap().score(), 3);
+    }
+
+    #[test]
+    fn ali_score_3_aces() {
+        let hand = [
+            Card {
+                suit: Suit::Oros,
+                value: Value::Uno,
+            },
+            Card {
+                suit: Suit::Bastos,
+                value: Value::Uno,
+            },
+            Card {
+                suit: Suit::Espadas,
+                value: Value::Uno,
+            },
+        ];
+        assert_eq!(Ali::from_cards(&hand).unwrap().score(), 6);
     }
 
     #[test]
