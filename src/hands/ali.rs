@@ -8,7 +8,7 @@ struct Ali {
 }
 
 impl Ali {
-    fn from_cards(cards: [Card; 3]) -> Option<Self> {
+    pub fn from_cards(cards: &[Card]) -> Option<Self> {
         cards
             .into_iter()
             .sorted_by_key(|card| card.value)
@@ -74,7 +74,7 @@ mod tests {
                 value: Value::Uno,
             },
         ];
-        assert!(Ali::from_cards(hand).is_some());
+        assert!(Ali::from_cards(&hand).is_some());
 
         let hand = [
             Card {
@@ -90,7 +90,7 @@ mod tests {
                 value: Value::Rey,
             },
         ];
-        assert!(Ali::from_cards(hand).is_some());
+        assert!(Ali::from_cards(&hand).is_some());
     }
 
     #[test]
@@ -109,7 +109,7 @@ mod tests {
                 value: Value::Cuatro,
             },
         ];
-        assert!(Ali::from_cards(hand).is_some());
+        assert!(Ali::from_cards(&hand).is_some());
 
         let hand = [
             Card {
@@ -125,7 +125,7 @@ mod tests {
                 value: Value::Rey,
             },
         ];
-        assert!(Ali::from_cards(hand).is_some());
+        assert!(Ali::from_cards(&hand).is_some());
     }
 
     #[test]
@@ -144,7 +144,7 @@ mod tests {
                 value: Value::Cinco,
             },
         ];
-        assert!(Ali::from_cards(hand).is_none());
+        assert!(Ali::from_cards(&hand).is_none());
 
         let hand = [
             Card {
@@ -160,7 +160,7 @@ mod tests {
                 value: Value::Rey,
             },
         ];
-        assert!(Ali::from_cards(hand).is_none());
+        assert!(Ali::from_cards(&hand).is_none());
     }
 
     #[test]
@@ -179,7 +179,7 @@ mod tests {
                 value: Value::Uno,
             },
         ];
-        assert!(Ali::from_cards(hand).unwrap().is_ali_3_cards());
+        assert!(Ali::from_cards(&hand).unwrap().is_ali_3_cards());
     }
 
     #[test]
@@ -198,12 +198,12 @@ mod tests {
                 value: Value::Cuatro,
             },
         ];
-        assert!(!Ali::from_cards(hand).unwrap().is_ali_3_cards());
+        assert!(!Ali::from_cards(&hand).unwrap().is_ali_3_cards());
     }
 
     #[test]
     fn ali_ordering() {
-        let ali_3_reyes = Ali::from_cards([
+        let ali_3_reyes = Ali::from_cards(&[
             Card {
                 suit: Suit::Oros,
                 value: Value::Rey,
@@ -217,7 +217,7 @@ mod tests {
                 value: Value::Rey,
             },
         ]);
-        let ali_3_unos = Ali::from_cards([
+        let ali_3_unos = Ali::from_cards(&[
             Card {
                 suit: Suit::Oros,
                 value: Value::Uno,
@@ -231,7 +231,7 @@ mod tests {
                 value: Value::Uno,
             },
         ]);
-        let ali_3_normal = Ali::from_cards([
+        let ali_3_normal = Ali::from_cards(&[
             Card {
                 suit: Suit::Oros,
                 value: Value::Seis,
@@ -245,7 +245,7 @@ mod tests {
                 value: Value::Seis,
             },
         ]);
-        let ali_3_low = Ali::from_cards([
+        let ali_3_low = Ali::from_cards(&[
             Card {
                 suit: Suit::Oros,
                 value: Value::Dos,
@@ -259,7 +259,7 @@ mod tests {
                 value: Value::Dos,
             },
         ]);
-        let ali_2_reyes = Ali::from_cards([
+        let ali_2_reyes = Ali::from_cards(&[
             Card {
                 suit: Suit::Oros,
                 value: Value::Rey,
@@ -273,7 +273,7 @@ mod tests {
                 value: Value::Rey,
             },
         ]);
-        let ali_2_unos = Ali::from_cards([
+        let ali_2_unos = Ali::from_cards(&[
             Card {
                 suit: Suit::Oros,
                 value: Value::Uno,
@@ -287,7 +287,7 @@ mod tests {
                 value: Value::Rey,
             },
         ]);
-        let ali_2_normal = Ali::from_cards([
+        let ali_2_normal = Ali::from_cards(&[
             Card {
                 suit: Suit::Oros,
                 value: Value::Cinco,
@@ -301,7 +301,7 @@ mod tests {
                 value: Value::Seis,
             },
         ]);
-        let ali_2_low = Ali::from_cards([
+        let ali_2_low = Ali::from_cards(&[
             Card {
                 suit: Suit::Oros,
                 value: Value::Dos,

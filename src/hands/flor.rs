@@ -3,13 +3,16 @@ use itertools::Itertools;
 use deck::{Card, Value};
 
 #[derive(Debug, Eq, PartialEq)]
-struct Flor {
-    cards: [Card; 3],
+pub struct Flor<'a> {
+    cards: &'a [Card],
     marker: Card,
 }
 
-impl Flor {
-    fn is_flor(cards: [Card; 3], marker: Card) -> bool {
+impl<'a> Flor<'a> {
+    fn is_flor(cards: &[Card], marker: Card) -> bool {
+        if cards.len() != 3 {
+            return false;
+        }
         cards
             .iter()
             .filter(|card| !card.is_perico(marker))
@@ -18,7 +21,7 @@ impl Flor {
             .all_equal()
     }
 
-    fn from_cards(cards: [Card; 3], marker: Card) -> Option<Self> {
+    pub fn from_cards(cards: &'a [Card], marker: Card) -> Option<Self> {
         if Self::is_flor(cards, marker) {
             Some(Flor { cards, marker })
         } else {
@@ -48,13 +51,13 @@ impl Flor {
     }
 }
 
-impl Ord for Flor {
+impl<'a> Ord for Flor<'a> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.value().cmp(&other.value())
     }
 }
 
-impl PartialOrd for Flor {
+impl<'a> PartialOrd for Flor<'a> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
@@ -85,7 +88,7 @@ mod tests {
             suit: Suit::Bastos,
             value: Value::Uno,
         };
-        assert!(Flor::is_flor(hand, marker));
+        assert!(Flor::is_flor(&hand, marker));
     }
 
     #[test]
@@ -108,7 +111,7 @@ mod tests {
             suit: Suit::Bastos,
             value: Value::Uno,
         };
-        assert!(!Flor::is_flor(hand, marker));
+        assert!(!Flor::is_flor(&hand, marker));
     }
 
     #[test]
@@ -131,7 +134,7 @@ mod tests {
             suit: Suit::Bastos,
             value: Value::Uno,
         };
-        assert!(!Flor::is_flor(hand, marker));
+        assert!(!Flor::is_flor(&hand, marker));
     }
 
     #[test]
@@ -154,7 +157,7 @@ mod tests {
             suit: Suit::Bastos,
             value: Value::Uno,
         };
-        assert!(!Flor::is_flor(hand, marker));
+        assert!(!Flor::is_flor(&hand, marker));
     }
 
     #[test]
@@ -177,7 +180,7 @@ mod tests {
             suit: Suit::Bastos,
             value: Value::Uno,
         };
-        assert!(Flor::is_flor(hand, marker));
+        assert!(Flor::is_flor(&hand, marker));
     }
 
     #[test]
@@ -200,7 +203,7 @@ mod tests {
             suit: Suit::Bastos,
             value: Value::Uno,
         };
-        assert!(Flor::is_flor(hand, marker));
+        assert!(Flor::is_flor(&hand, marker));
     }
 
     #[test]
@@ -223,7 +226,7 @@ mod tests {
             suit: Suit::Bastos,
             value: Value::Uno,
         };
-        assert!(Flor::is_flor(hand, marker));
+        assert!(Flor::is_flor(&hand, marker));
     }
 
     #[test]
@@ -246,7 +249,7 @@ mod tests {
             suit: Suit::Bastos,
             value: Value::Uno,
         };
-        let result = Flor::from_cards(hand, marker);
+        let result = Flor::from_cards(&hand, marker);
         assert!(result.is_some());
     }
 
@@ -270,7 +273,7 @@ mod tests {
             suit: Suit::Bastos,
             value: Value::Uno,
         };
-        let result = Flor::from_cards(hand, marker);
+        let result = Flor::from_cards(&hand, marker);
         assert!(result.is_none());
     }
 
@@ -294,7 +297,7 @@ mod tests {
             suit: Suit::Bastos,
             value: Value::Uno,
         };
-        let result = Flor::from_cards(hand, marker).unwrap().value();
+        let result = Flor::from_cards(&hand, marker).unwrap().value();
         assert_eq!(result, 20);
     }
 
@@ -318,7 +321,7 @@ mod tests {
             suit: Suit::Oros,
             value: Value::Uno,
         };
-        let result = Flor::from_cards(hand, marker).unwrap().value();
+        let result = Flor::from_cards(&hand, marker).unwrap().value();
         assert_eq!(result, 35);
     }
 
@@ -342,7 +345,7 @@ mod tests {
             suit: Suit::Oros,
             value: Value::Uno,
         };
-        let result = Flor::from_cards(hand, marker).unwrap().value();
+        let result = Flor::from_cards(&hand, marker).unwrap().value();
         assert_eq!(result, 42);
     }
 
@@ -353,7 +356,7 @@ mod tests {
             value: Value::Uno,
         };
         let flor_42 = Flor::from_cards(
-            [
+            &[
                 Card {
                     suit: Suit::Oros,
                     value: Value::Sota,
@@ -370,7 +373,7 @@ mod tests {
             marker,
         ).unwrap();
         let flor_20 = Flor::from_cards(
-            [
+            &[
                 Card {
                     suit: Suit::Bastos,
                     value: Value::Sota,
@@ -387,7 +390,7 @@ mod tests {
             marker,
         ).unwrap();
         let flor_35 = Flor::from_cards(
-            [
+            &[
                 Card {
                     suit: Suit::Oros,
                     value: Value::Siete,

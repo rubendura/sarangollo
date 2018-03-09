@@ -15,8 +15,8 @@ impl Secansa {
         self.cards.last().unwrap()
     }
 
-    fn sorted_secansa_cards(cards: [Card; 3]) -> Option<Vec<Card>> {
-        let mut sorted = cards;
+    fn sorted_secansa_cards(cards: &[Card]) -> Option<Vec<Card>> {
+        let mut sorted = cards.to_vec();
         sorted.sort_by_key(|card| card.value);
 
         let mut cards = sorted
@@ -40,7 +40,7 @@ impl Secansa {
         }
     }
 
-    fn from_cards(cards: [Card; 3]) -> Option<Self> {
+    pub fn from_cards(cards: &[Card]) -> Option<Self> {
         if let Some(cards) = Self::sorted_secansa_cards(cards) {
             Some(Secansa { cards })
         } else {
@@ -90,7 +90,7 @@ mod tests {
                 value: Value::Tres,
             },
         ];
-        assert!(Secansa::sorted_secansa_cards(hand).is_some());
+        assert!(Secansa::sorted_secansa_cards(&hand).is_some());
 
         let hand = [
             Card {
@@ -106,7 +106,7 @@ mod tests {
                 value: Value::Rey,
             },
         ];
-        assert!(Secansa::sorted_secansa_cards(hand).is_some());
+        assert!(Secansa::sorted_secansa_cards(&hand).is_some());
     }
 
     #[test]
@@ -125,7 +125,7 @@ mod tests {
                 value: Value::Cuatro,
             },
         ];
-        assert!(Secansa::sorted_secansa_cards(hand).is_some());
+        assert!(Secansa::sorted_secansa_cards(&hand).is_some());
 
         let hand = [
             Card {
@@ -141,7 +141,7 @@ mod tests {
                 value: Value::Rey,
             },
         ];
-        assert!(Secansa::sorted_secansa_cards(hand).is_some());
+        assert!(Secansa::sorted_secansa_cards(&hand).is_some());
     }
 
     #[test]
@@ -160,7 +160,7 @@ mod tests {
                 value: Value::Cinco,
             },
         ];
-        assert!(Secansa::sorted_secansa_cards(hand).is_none());
+        assert!(Secansa::sorted_secansa_cards(&hand).is_none());
 
         let hand = [
             Card {
@@ -176,7 +176,7 @@ mod tests {
                 value: Value::Rey,
             },
         ];
-        assert!(Secansa::sorted_secansa_cards(hand).is_none());
+        assert!(Secansa::sorted_secansa_cards(&hand).is_none());
     }
 
     #[test]
@@ -195,7 +195,7 @@ mod tests {
                 value: Value::Tres,
             },
         ];
-        assert!(Secansa::from_cards(hand).unwrap().is_secansa_3_cards());
+        assert!(Secansa::from_cards(&hand).unwrap().is_secansa_3_cards());
     }
 
     #[test]
@@ -214,12 +214,12 @@ mod tests {
                 value: Value::Cuatro,
             },
         ];
-        assert!(!Secansa::from_cards(hand).unwrap().is_secansa_3_cards());
+        assert!(!Secansa::from_cards(&hand).unwrap().is_secansa_3_cards());
     }
 
     #[test]
     fn secansa_ordering() {
-        let secansa_3_cards = Secansa::from_cards([
+        let secansa_3_cards = Secansa::from_cards(&[
             Card {
                 suit: Suit::Oros,
                 value: Value::Uno,
@@ -233,7 +233,7 @@ mod tests {
                 value: Value::Tres,
             },
         ]);
-        let secansa_real = Secansa::from_cards([
+        let secansa_real = Secansa::from_cards(&[
             Card {
                 suit: Suit::Oros,
                 value: Value::Uno,
@@ -247,7 +247,7 @@ mod tests {
                 value: Value::Tres,
             },
         ]);
-        let secansa_2_top = Secansa::from_cards([
+        let secansa_2_top = Secansa::from_cards(&[
             Card {
                 suit: Suit::Oros,
                 value: Value::Sota,
@@ -261,7 +261,7 @@ mod tests {
                 value: Value::Tres,
             },
         ]);
-        let secansa_2_low = Secansa::from_cards([
+        let secansa_2_low = Secansa::from_cards(&[
             Card {
                 suit: Suit::Oros,
                 value: Value::Dos,
@@ -275,7 +275,7 @@ mod tests {
                 value: Value::Cinco,
             },
         ]);
-        let secansa_2_low_with_high_card = Secansa::from_cards([
+        let secansa_2_low_with_high_card = Secansa::from_cards(&[
             Card {
                 suit: Suit::Oros,
                 value: Value::Dos,
