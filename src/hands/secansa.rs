@@ -47,6 +47,14 @@ impl Secansa {
             None
         }
     }
+
+    pub fn score(&self) -> u8 {
+        if self.is_secansa_3_cards() {
+            3
+        } else {
+            1
+        }
+    }
 }
 
 impl Ord for Secansa {
@@ -215,6 +223,44 @@ mod tests {
             },
         ];
         assert!(!Secansa::from_cards(&hand).unwrap().is_secansa_3_cards());
+    }
+
+    #[test]
+    fn secansa_score_2_cards() {
+        let hand = [
+            Card {
+                suit: Suit::Oros,
+                value: Value::Uno,
+            },
+            Card {
+                suit: Suit::Bastos,
+                value: Value::Dos,
+            },
+            Card {
+                suit: Suit::Espadas,
+                value: Value::Cuatro,
+            },
+        ];
+        assert_eq!(Secansa::from_cards(&hand).unwrap().score(), 1);
+    }
+
+    #[test]
+    fn secansa_score_3_cards() {
+        let hand = [
+            Card {
+                suit: Suit::Oros,
+                value: Value::Uno,
+            },
+            Card {
+                suit: Suit::Bastos,
+                value: Value::Dos,
+            },
+            Card {
+                suit: Suit::Espadas,
+                value: Value::Tres,
+            },
+        ];
+        assert_eq!(Secansa::from_cards(&hand).unwrap().score(), 3);
     }
 
     #[test]
