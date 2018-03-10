@@ -10,7 +10,7 @@ impl Scoreboard {
     pub fn annotate(&mut self, round_score: RoundScore) {
         //! Annotate a round on the scoreboard and perform management tasks to rotate camas and cotos when required
 
-        self.get_current_coto().annotate(round_score);
+        self.get_current_coto_mut().annotate(round_score);
         if self.get_current_coto().winner().is_some() {
             self.start_coto();
         }
@@ -44,7 +44,13 @@ impl Scoreboard {
         self.cotos.push(Coto::new());
     }
 
-    fn get_current_coto(&mut self) -> &mut Coto {
+    fn get_current_coto(&self) -> &Coto {
+        self.cotos
+            .last()
+            .expect("Scoreboard not properly initialised")
+    }
+
+    fn get_current_coto_mut(&mut self) -> &mut Coto {
         self.cotos
             .last_mut()
             .expect("Scoreboard not properly initialised")
@@ -185,7 +191,11 @@ impl Coto {
         self.cames.push(Cama::default());
     }
 
-    fn get_current_cama(&mut self) -> &mut Cama {
+    fn get_current_cama(&self) -> &Cama {
+        self.cames.last().expect("Coto not properly initialised")
+    }
+
+    fn get_current_cama_mut(&mut self) -> &mut Cama {
         self.cames
             .last_mut()
             .expect("Coto not properly initialised")
@@ -194,7 +204,7 @@ impl Coto {
     fn annotate(&mut self, round_score: RoundScore) {
         //! Annotate a round on the coto and perform management tasks to rotate camas when required
 
-        self.get_current_cama().annotate(round_score);
+        self.get_current_cama_mut().annotate(round_score);
         if self.get_current_cama().winner().is_some() {
             self.start_cama();
         }
@@ -232,7 +242,7 @@ mod tests {
     #[test]
     fn scoreboard_get_current_coto() {
         let mut scoreboard: Scoreboard = Default::default();
-        scoreboard.get_current_coto().start_cama();
+        scoreboard.get_current_coto_mut().start_cama();
         let coto1 = scoreboard.get_current_coto().clone();
         scoreboard.start_coto();
         let coto2 = scoreboard.get_current_coto();
@@ -326,8 +336,8 @@ mod tests {
 
         fn annotate(scoreboard: &mut Scoreboard, team: Team) {
             scoreboard
-                .get_current_coto()
-                .get_current_cama()
+                .get_current_coto_mut()
+                .get_current_cama_mut()
                 .annotate(RoundScore {
                     rey: None,
                     flor: None,
@@ -335,7 +345,7 @@ mod tests {
                     ali: None,
                     truc: RoundScoreSection(team, 40),
                 });
-            scoreboard.get_current_coto().start_cama();
+            scoreboard.get_current_coto_mut().start_cama();
         }
 
         annotate(&mut scoreboard, Team::Team1);
@@ -387,7 +397,7 @@ mod tests {
     #[test]
     fn coto_get_current_cama() {
         let mut coto = Coto::new();
-        coto.get_current_cama().annotate(RoundScore {
+        coto.get_current_cama_mut().annotate(RoundScore {
             rey: None,
             flor: Some(RoundScoreSection(Team::Team1, 3)),
             secansa: Some(RoundScoreSection(Team::Team1, 1)),
@@ -440,7 +450,7 @@ mod tests {
         assert_eq!(coto.winner(), None);
 
         coto.start_cama();
-        coto.get_current_cama().annotate(RoundScore {
+        coto.get_current_cama_mut().annotate(RoundScore {
             rey: None,
             flor: None,
             secansa: None,
@@ -450,7 +460,7 @@ mod tests {
         assert_eq!(coto.winner(), None);
 
         coto.start_cama();
-        coto.get_current_cama().annotate(RoundScore {
+        coto.get_current_cama_mut().annotate(RoundScore {
             rey: None,
             flor: None,
             secansa: None,
@@ -460,7 +470,7 @@ mod tests {
         assert_eq!(coto.winner(), None);
 
         coto.start_cama();
-        coto.get_current_cama().annotate(RoundScore {
+        coto.get_current_cama_mut().annotate(RoundScore {
             rey: None,
             flor: None,
             secansa: None,
