@@ -16,6 +16,10 @@ impl Scoreboard {
         }
     }
 
+    pub fn current_cama_score(&self) -> CamaScore {
+        self.get_current_coto().get_current_cama().score()
+    }
+
     pub fn winner(&self) -> Option<Team> {
         let winning_score = 2;
         self.cotos
