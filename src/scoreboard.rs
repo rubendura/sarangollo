@@ -135,7 +135,7 @@ struct Cama {
 }
 
 impl Cama {
-    fn get_current_score(&self) -> CamaScore {
+    fn score(&self) -> CamaScore {
         self.rounds
             .iter()
             .flat_map(|x| x.to_score_deltas())
@@ -488,7 +488,7 @@ mod tests {
     }
 
     #[test]
-    fn cama_get_current_score() {
+    fn cama_score() {
         let mut cama = Cama::default();
         cama.annotate(RoundScore {
             rey: None,
@@ -504,7 +504,7 @@ mod tests {
             ali: Some(RoundScoreSection(Team::Team1, 1)),
             truc: RoundScoreSection(Team::Team1, 1),
         });
-        let score = cama.get_current_score();
+        let score = cama.score();
         let expected = CamaScore {
             team1: 12,
             team2: 11,
