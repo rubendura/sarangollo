@@ -114,9 +114,19 @@ impl RoundScore {
 }
 
 #[derive(Debug, PartialEq, Default, Copy, Clone)]
-struct CamaScore {
+pub struct CamaScore {
     team1: u8,
     team2: u8,
+}
+
+impl CamaScore {
+    pub fn max(&self) -> u8 {
+        if self.team1 >= self.team2 {
+            self.team1
+        } else {
+            self.team2
+        }
+    }
 }
 
 #[derive(Debug, Default, PartialEq, Clone)]
