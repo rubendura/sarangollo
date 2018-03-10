@@ -60,7 +60,7 @@ impl Default for Scoreboard {
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
-pub struct RoundScoreSection(Team, u8);
+pub struct RoundScoreSection(pub Team, pub u8);
 
 impl RoundScoreSection {
     fn to_score_delta(&self) -> ScoreDelta {
