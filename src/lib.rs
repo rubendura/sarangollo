@@ -188,10 +188,10 @@ mod tests {
             assert_eq!(round.seats[i].hand.len(), 0);
             assert_eq!(round.seats[i].face_up_cards.len(), 0);
         }
-        const num_cards: usize = 6;
-        round.deal(num_cards);
+        const NUM_CARDS: usize = 6;
+        round.deal(NUM_CARDS);
         for i in 0..6 {
-            assert_eq!(round.seats[i].hand.len(), 6);
+            assert_eq!(round.seats[i].hand.len(), NUM_CARDS);
             assert_eq!(round.seats[i].face_up_cards.len(), 0);
         }
     }
