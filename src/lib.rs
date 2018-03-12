@@ -69,6 +69,16 @@ impl<'a> Seat<'a> {
 
 struct Game {
     players: Vec<Player>,
+    scoreboard: scoreboard::Scoreboard,
+}
+
+impl Game {
+    fn new(players: Vec<Player>) -> Self {
+        Game {
+            players,
+            scoreboard: Default::default(),
+        }
+    }
 }
 
 struct Round<'a> {
@@ -129,16 +139,14 @@ mod tests {
 
     #[test]
     fn round_new() {
-        let game = Game {
-            players: vec![
-                Player::new("a"),
-                Player::new("b"),
-                Player::new("c"),
-                Player::new("d"),
-                Player::new("e"),
-                Player::new("f"),
-            ],
-        };
+        let game = Game::new(vec![
+            Player::new("a"),
+            Player::new("b"),
+            Player::new("c"),
+            Player::new("d"),
+            Player::new("e"),
+            Player::new("f"),
+        ]);
         let mut round = Round::new(&game, &game.players[0], deck::Deck::default());
         assert_eq!(round.deck.remaining_cards(), 39);
         let mut cards = Vec::default();
@@ -150,16 +158,14 @@ mod tests {
 
     #[test]
     fn dealer_position() {
-        let game = Game {
-            players: vec![
-                Player::new("a"),
-                Player::new("b"),
-                Player::new("c"),
-                Player::new("d"),
-                Player::new("e"),
-                Player::new("f"),
-            ],
-        };
+        let game = Game::new(vec![
+            Player::new("a"),
+            Player::new("b"),
+            Player::new("c"),
+            Player::new("d"),
+            Player::new("e"),
+            Player::new("f"),
+        ]);
         let deck = deck::Deck::default();
         for i in 0..6 {
             let round = Round::new(&game, &game.players[i], deck.clone());
@@ -169,16 +175,14 @@ mod tests {
 
     #[test]
     fn round_deal() {
-        let game = Game {
-            players: vec![
-                Player::new("a"),
-                Player::new("b"),
-                Player::new("c"),
-                Player::new("d"),
-                Player::new("e"),
-                Player::new("f"),
-            ],
-        };
+        let game = Game::new(vec![
+            Player::new("a"),
+            Player::new("b"),
+            Player::new("c"),
+            Player::new("d"),
+            Player::new("e"),
+            Player::new("f"),
+        ]);
         let mut round = Round::new(&game, &game.players[0], deck::Deck::default());
         for i in 0..6 {
             assert_eq!(round.seats[i].hand.len(), 0);
@@ -273,16 +277,14 @@ mod tests {
 
     #[test]
     fn is_round_finished() {
-        let game = Game {
-            players: vec![
-                Player::new("a"),
-                Player::new("b"),
-                Player::new("c"),
-                Player::new("d"),
-                Player::new("e"),
-                Player::new("f"),
-            ],
-        };
+        let game = Game::new(vec![
+            Player::new("a"),
+            Player::new("b"),
+            Player::new("c"),
+            Player::new("d"),
+            Player::new("e"),
+            Player::new("f"),
+        ]);
         let mut round = Round::new(&game, &game.players[0], deck::Deck::default());
         round.seats[0].hand.push(deck::Card {
             suit: deck::Suit::Bastos,
