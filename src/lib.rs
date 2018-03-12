@@ -58,7 +58,7 @@ impl<'a> Seat<'a> {
     }
 
     fn show_card(&mut self, card: deck::Card) -> Option<deck::Card> {
-        if let Some(_) = self.discard(card) {
+        if self.discard(card).is_some() {
             self.face_up_cards.push(card);
             Some(card)
         } else {
