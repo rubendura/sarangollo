@@ -6,6 +6,8 @@ mod deck;
 pub mod scoreboard;
 mod hands;
 
+use hands::{ali, flor, secansa};
+
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum Team {
     Team1,
@@ -81,11 +83,20 @@ impl Game {
     }
 }
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+struct GameBet<T> {
+    winner: Option<Team>,
+    agreed_bet: T,
+}
+
 struct Round<'a> {
     seats: Vec<Seat<'a>>,
     dealer: &'a Player,
     deck: deck::Deck,
     marker: deck::Card,
+    flor_bet: Option<GameBet<flor::Bet>>,
+    secansa_bet: Option<GameBet<secansa::Bet>>,
+    ali_bet: Option<GameBet<ali::Bet>>,
 }
 
 impl<'a> Round<'a> {
@@ -96,6 +107,9 @@ impl<'a> Round<'a> {
             dealer,
             marker: deck.draw().unwrap(),
             deck,
+            flor_bet: None,
+            secansa_bet: None,
+            ali_bet: None,
         }
     }
 
@@ -118,6 +132,20 @@ impl<'a> Round<'a> {
 
     fn is_finished(&self) -> bool {
         self.seats.iter().all(|seat| seat.hand.is_empty())
+    }
+
+    // fn compute_game_winners(&mut self) -> Result<(), RoundNotFinishedError> {}
+
+    fn set_flor_bet(&mut self, agreed_bet: flor::Bet, winner: Option<Team>) {
+        self.flor_bet = Some(GameBet { agreed_bet, winner })
+    }
+
+    fn set_secansa_bet(&mut self, agreed_bet: secansa::Bet, winner: Option<Team>) {
+        self.secansa_bet = Some(GameBet { agreed_bet, winner })
+    }
+
+    fn set_ali_bet(&mut self, agreed_bet: ali::Bet, winner: Option<Team>) {
+        self.ali_bet = Some(GameBet { agreed_bet, winner })
     }
 }
 
@@ -293,6 +321,51 @@ mod tests {
         assert!(!round.is_finished());
         round.seats[0].hand.clear();
         assert!(round.is_finished());
+    }
+
+    #[test]
+    fn test_set_flor_bet() {
+        let game = Game::new(vec![Player::new("a")]);
+        let mut round = Round::new(&game, &game.players[0], deck::Deck::default());
+
+        assert_eq!(round.flor_bet, None);
+
+        round.set_flor_bet(flor::Bet::Envit, None);
+        let expected = Some(GameBet {
+            winner: None,
+            agreed_bet: flor::Bet::Envit,
+        });
+        assert_eq!(round.flor_bet, expected);
+    }
+
+    #[test]
+    fn test_set_secansa_bet() {
+        let game = Game::new(vec![Player::new("a")]);
+        let mut round = Round::new(&game, &game.players[0], deck::Deck::default());
+
+        assert_eq!(round.secansa_bet, None);
+
+        round.set_secansa_bet(secansa::Bet::Val(3), None);
+        let expected = Some(GameBet {
+            winner: None,
+            agreed_bet: secansa::Bet::Val(3),
+        });
+        assert_eq!(round.secansa_bet, expected);
+    }
+
+    #[test]
+    fn test_set_ali_bet() {
+        let game = Game::new(vec![Player::new("a")]);
+        let mut round = Round::new(&game, &game.players[0], deck::Deck::default());
+
+        assert_eq!(round.ali_bet, None);
+
+        round.set_ali_bet(ali::Bet::Announced, None);
+        let expected = Some(GameBet {
+            winner: None,
+            agreed_bet: ali::Bet::Announced,
+        });
+        assert_eq!(round.ali_bet, expected);
     }
 
 }

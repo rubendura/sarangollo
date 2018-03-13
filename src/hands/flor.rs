@@ -8,7 +8,7 @@ pub struct Flor<'a> {
     marker: Card,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Bet {
     Announced,
     Envit,
