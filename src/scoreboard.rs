@@ -1,17 +1,37 @@
 use super::Team;
 use std::ops::Add;
 
+#[derive(Debug, Copy, Clone)]
+pub struct GameConfig {
+    pub game_win_score: u8,
+    pub coto_win_score: u8,
+    pub cama_win_score: u8,
+}
+
+impl Default for GameConfig {
+    fn default() -> Self {
+        GameConfig {
+            game_win_score: 2,
+            coto_win_score: 2,
+            cama_win_score: 40,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Scoreboard {
     cotos: Vec<Coto>,
+    pub game_config: GameConfig,
 }
 
 impl Scoreboard {
     pub fn annotate(&mut self, round_score: RoundScore) {
         //! Annotate a round on the scoreboard and perform management tasks to rotate camas and cotos when required
 
-        self.get_current_coto_mut().annotate(round_score);
-        if self.get_current_coto().winner().is_some() {
+        let game_config = self.game_config;
+        self.get_current_coto_mut()
+            .annotate(round_score, game_config);
+        if self.get_current_coto().winner(self.game_config).is_some() {
             self.start_coto();
         }
     }
@@ -20,11 +40,11 @@ impl Scoreboard {
         self.get_current_coto().get_current_cama().score()
     }
 
-    pub fn winner(&self) -> Option<Team> {
-        let winning_score = 2;
+    pub fn winner(&self, game_config: GameConfig) -> Option<Team> {
+        let winning_score = game_config.game_win_score;
         self.cotos
             .iter()
-            .map(|coto| coto.winner())
+            .map(|coto| coto.winner(game_config))
             .scan((0, 0), |state, x| {
                 *state = match x {
                     Some(Team::Team1) => (state.0 + 1, state.1),
@@ -63,7 +83,10 @@ impl Scoreboard {
 
 impl Default for Scoreboard {
     fn default() -> Self {
-        let mut scoreboard = Scoreboard { cotos: Vec::new() };
+        let mut scoreboard = Scoreboard {
+            cotos: Vec::new(),
+            game_config: GameConfig::default(),
+        };
         scoreboard.start_coto();
         scoreboard
     }
@@ -156,8 +179,8 @@ impl Cama {
         self.rounds.push(score);
     }
 
-    fn winner(&self) -> Option<Team> {
-        let winning_score = 40;
+    fn winner(&self, game_config: GameConfig) -> Option<Team> {
+        let winning_score = game_config.cama_win_score;
         self.rounds
             .iter()
             .flat_map(|x| x.to_score_deltas())
@@ -205,20 +228,20 @@ impl Coto {
             .expect("Coto not properly initialised")
     }
 
-    fn annotate(&mut self, round_score: RoundScore) {
+    fn annotate(&mut self, round_score: RoundScore, game_config: GameConfig) {
         //! Annotate a round on the coto and perform management tasks to rotate camas when required
 
         self.get_current_cama_mut().annotate(round_score);
-        if self.get_current_cama().winner().is_some() {
+        if self.get_current_cama().winner(game_config).is_some() {
             self.start_cama();
         }
     }
 
-    fn winner(&self) -> Option<Team> {
-        let winning_score = 2;
+    fn winner(&self, game_config: GameConfig) -> Option<Team> {
+        let winning_score = game_config.coto_win_score;
         self.cames
             .iter()
-            .map(|cama| cama.winner())
+            .map(|cama| cama.winner(game_config))
             .scan((0, 0), |state, x| {
                 *state = match x {
                     Some(Team::Team1) => (state.0 + 1, state.1),
@@ -255,7 +278,10 @@ mod tests {
 
     #[test]
     fn scoreboard_start_coto() {
-        let mut scoreboard = Scoreboard { cotos: Vec::new() };
+        let mut scoreboard = Scoreboard {
+            cotos: Vec::new(),
+            game_config: GameConfig::default(),
+        };
         scoreboard.start_coto();
         assert!(!scoreboard.cotos.is_empty());
     }
@@ -287,6 +313,7 @@ mod tests {
     #[test]
     fn scoreboard_annotate_rotates_camas() {
         let mut scoreboard: Scoreboard = Default::default();
+        let max_cama_score = scoreboard.game_config.cama_win_score;
         scoreboard.annotate(RoundScore {
             rey: None,
             flor: None,
@@ -300,7 +327,7 @@ mod tests {
             flor: None,
             secansa: None,
             ali: None,
-            truc: RoundScoreSection(Team::Team1, 37),
+            truc: RoundScoreSection(Team::Team1, max_cama_score - 3),
         });
         assert_eq!(scoreboard.get_current_coto().cames.len(), 2);
     }
@@ -308,37 +335,34 @@ mod tests {
     #[test]
     fn scoreboard_annotate_rotates_cotos() {
         let mut scoreboard: Scoreboard = Default::default();
-        scoreboard.annotate(RoundScore {
-            rey: None,
-            flor: None,
-            secansa: None,
-            ali: None,
-            truc: RoundScoreSection(Team::Team1, 40),
-        });
-        scoreboard.annotate(RoundScore {
-            rey: None,
-            flor: None,
-            secansa: None,
-            ali: None,
-            truc: RoundScoreSection(Team::Team2, 40),
-        });
-        assert_eq!(scoreboard.cotos.len(), 1);
-        scoreboard.annotate(RoundScore {
-            rey: None,
-            flor: None,
-            secansa: None,
-            ali: None,
-            truc: RoundScoreSection(Team::Team1, 40),
-        });
+        let max_coto_score = scoreboard.game_config.coto_win_score;
+        for _ in 0..max_coto_score {
+            scoreboard.annotate(RoundScore {
+                rey: None,
+                flor: None,
+                secansa: None,
+                ali: None,
+                truc: RoundScoreSection(Team::Team1, 40),
+            });
+        }
         assert_eq!(scoreboard.cotos.len(), 2);
     }
 
     #[test]
     fn scoreboard_winner() {
-        let mut scoreboard: Scoreboard = Default::default();
-        assert!(scoreboard.winner().is_none());
+        let mut scoreboard: Scoreboard = Scoreboard {
+            cotos: Vec::new(),
+            game_config: GameConfig {
+                cama_win_score: 40,
+                coto_win_score: 2,
+                game_win_score: 2,
+            },
+        };
+        scoreboard.start_coto();
+        assert!(scoreboard.winner(scoreboard.game_config).is_none());
 
         fn annotate(scoreboard: &mut Scoreboard, team: Team) {
+            let cama_win_score = scoreboard.game_config.cama_win_score;
             scoreboard
                 .get_current_coto_mut()
                 .get_current_cama_mut()
@@ -347,41 +371,41 @@ mod tests {
                     flor: None,
                     secansa: None,
                     ali: None,
-                    truc: RoundScoreSection(team, 40),
+                    truc: RoundScoreSection(team, cama_win_score),
                 });
             scoreboard.get_current_coto_mut().start_cama();
         }
 
         annotate(&mut scoreboard, Team::Team1);
-        assert!(scoreboard.winner().is_none());
+        assert!(scoreboard.winner(scoreboard.game_config).is_none());
 
         annotate(&mut scoreboard, Team::Team2);
-        assert!(scoreboard.winner().is_none());
+        assert!(scoreboard.winner(scoreboard.game_config).is_none());
 
         annotate(&mut scoreboard, Team::Team2);
         // Team2 coto
-        assert!(scoreboard.winner().is_none());
+        assert!(scoreboard.winner(scoreboard.game_config).is_none());
 
         scoreboard.start_coto();
 
         annotate(&mut scoreboard, Team::Team2);
-        assert!(scoreboard.winner().is_none());
+        assert!(scoreboard.winner(scoreboard.game_config).is_none());
 
         annotate(&mut scoreboard, Team::Team1);
-        assert!(scoreboard.winner().is_none());
+        assert!(scoreboard.winner(scoreboard.game_config).is_none());
 
         annotate(&mut scoreboard, Team::Team1);
         // Team1 coto
-        assert!(scoreboard.winner().is_none());
+        assert!(scoreboard.winner(scoreboard.game_config).is_none());
 
         scoreboard.start_coto();
 
         annotate(&mut scoreboard, Team::Team1);
-        assert!(scoreboard.winner().is_none());
+        assert!(scoreboard.winner(scoreboard.game_config).is_none());
 
         annotate(&mut scoreboard, Team::Team1);
         // Team1 wins!
-        assert_eq!(scoreboard.winner(), Some(Team::Team1));
+        assert_eq!(scoreboard.winner(scoreboard.game_config), Some(Team::Team1));
     }
 
     #[test]
@@ -416,42 +440,54 @@ mod tests {
 
     #[test]
     fn coto_annotate_writes_round_score() {
+        let game_config = GameConfig::default();
         let mut coto = Coto::new();
-        coto.annotate(RoundScore {
-            rey: None,
-            flor: None,
-            secansa: None,
-            ali: None,
-            truc: RoundScoreSection(Team::Team1, 3),
-        });
+        coto.annotate(
+            RoundScore {
+                rey: None,
+                flor: None,
+                secansa: None,
+                ali: None,
+                truc: RoundScoreSection(Team::Team1, 3),
+            },
+            game_config,
+        );
         assert!(!coto.get_current_cama().rounds.is_empty());
     }
 
     #[test]
     fn coto_annotate_rotates_camas() {
+        let game_config = GameConfig::default();
         let mut coto = Coto::new();
-        coto.annotate(RoundScore {
-            rey: None,
-            flor: None,
-            secansa: None,
-            ali: None,
-            truc: RoundScoreSection(Team::Team1, 3),
-        });
+        coto.annotate(
+            RoundScore {
+                rey: None,
+                flor: None,
+                secansa: None,
+                ali: None,
+                truc: RoundScoreSection(Team::Team1, 3),
+            },
+            game_config,
+        );
         assert_eq!(coto.cames.len(), 1);
-        coto.annotate(RoundScore {
-            rey: None,
-            flor: None,
-            secansa: None,
-            ali: None,
-            truc: RoundScoreSection(Team::Team1, 37),
-        });
+        coto.annotate(
+            RoundScore {
+                rey: None,
+                flor: None,
+                secansa: None,
+                ali: None,
+                truc: RoundScoreSection(Team::Team1, 37),
+            },
+            game_config,
+        );
         assert_eq!(coto.cames.len(), 2);
     }
 
     #[test]
     fn coto_winner() {
         let mut coto = Coto::new();
-        assert_eq!(coto.winner(), None);
+        let game_config = GameConfig::default();
+        assert_eq!(coto.winner(game_config), None);
 
         coto.start_cama();
         coto.get_current_cama_mut().annotate(RoundScore {
@@ -461,7 +497,7 @@ mod tests {
             ali: None,
             truc: RoundScoreSection(Team::Team1, 40),
         });
-        assert_eq!(coto.winner(), None);
+        assert_eq!(coto.winner(game_config), None);
 
         coto.start_cama();
         coto.get_current_cama_mut().annotate(RoundScore {
@@ -471,7 +507,7 @@ mod tests {
             ali: None,
             truc: RoundScoreSection(Team::Team2, 40),
         });
-        assert_eq!(coto.winner(), None);
+        assert_eq!(coto.winner(game_config), None);
 
         coto.start_cama();
         coto.get_current_cama_mut().annotate(RoundScore {
@@ -482,7 +518,7 @@ mod tests {
             truc: RoundScoreSection(Team::Team1, 40),
         });
 
-        assert_eq!(coto.winner(), Some(Team::Team1));
+        assert_eq!(coto.winner(game_config), Some(Team::Team1));
     }
 
     #[test]
@@ -528,6 +564,7 @@ mod tests {
 
     #[test]
     fn cama_winner() {
+        let game_config = GameConfig::default();
         // Team1: 35, Team2: 34
         let current_score = RoundScore {
             rey: None,
@@ -541,7 +578,7 @@ mod tests {
             rounds: vec![current_score],
         };
 
-        assert_eq!(current_cama.winner(), None);
+        assert_eq!(current_cama.winner(game_config), None);
 
         // Team1: 5, Team2: 6
         current_cama.annotate(RoundScore {
@@ -552,7 +589,7 @@ mod tests {
             truc: RoundScoreSection(Team::Team1, 1),      // Not used
         });
 
-        let winner = current_cama.winner();
+        let winner = current_cama.winner(game_config);
 
         assert_eq!(winner, Some(Team::Team2));
     }
