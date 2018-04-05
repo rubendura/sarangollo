@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use itertools::Itertools;
 use deck::{Card, Value};
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct Flor<'a> {
     cards: &'a [Card],
     marker: Card,

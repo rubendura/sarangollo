@@ -90,6 +90,7 @@ struct GameBet<T> {
 }
 
 struct Round<'a> {
+    game: &'a Game,
     seats: Vec<Seat<'a>>,
     dealer: &'a Player,
     deck: deck::Deck,
@@ -103,6 +104,7 @@ impl<'a> Round<'a> {
     fn new(game: &'a Game, dealer: &'a Player, mut deck: deck::Deck) -> Self {
         let seats = game.players.iter().map(Seat::new).collect();
         Self {
+            game,
             seats,
             dealer,
             marker: deck.draw().unwrap(),
@@ -146,6 +148,94 @@ impl<'a> Round<'a> {
 
     fn set_ali_bet(&mut self, agreed_bet: ali::Bet, winner: Option<Team>) {
         self.ali_bet = Some(GameBet { agreed_bet, winner })
+    }
+
+    fn get_round_score(&self) -> scoreboard::RoundScore {
+        scoreboard::RoundScore {
+            flor: self.get_flor_score(),
+            secansa: None,
+            ali: None,
+            rey: None,
+            truc: scoreboard::RoundScoreSection(Team::Team1, 0),
+        }
+    }
+
+    fn get_flor_winner_from_cards(&self) -> Option<Team> {
+        let mut flors_by_team = self.seats
+            .iter()
+
+            // Enumerate each seat's position
+            .enumerate()
+
+            // Set the first item to the hand, that is, the seat after the dealer (+1)
+            .cycle()
+            .skip(self.dealer_position() + 1)
+            .take(self.seats.len())
+
+            // Remove any seats without flor and map them to a team
+            .filter_map(|(pos, seat)| {
+                let flor = flor::Flor::from_cards(&seat.face_up_cards, self.marker);
+                let team = seat.get_team(pos as u8);
+                match flor {
+                    Some(flor) => Some((team, flor)),
+                    None => None,
+                }
+            })
+            .collect::<Vec<_>>();
+
+        // Iterator::max_by returns the last element that matches. We need the first.
+        flors_by_team.reverse();
+
+        flors_by_team
+            .into_iter()
+            // https://stackoverflow.com/a/49312019/2221217
+            .max_by(|&(_, ref flor1), &(_, ref flor2)| flor1.cmp(flor2))
+            .map(|(team, _)| team)
+    }
+
+    fn get_flor_score(&self) -> Option<scoreboard::RoundScoreSection> {
+        // Game must've been announced to be scored
+        let game_bet = match self.flor_bet {
+            Some(game_bet) => game_bet,
+            None => return None,
+        };
+
+        let cards_winner = self.get_flor_winner_from_cards();
+
+        let winner = match (game_bet.winner, cards_winner) {
+            // If there was a rejected bet, we've got a direct winner
+            (Some(winner), _) => winner,
+            // Otherwise get the winner from the facing up cards
+            (None, Some(winner)) => winner,
+            // If there still no winner, we can't score anything
+            _ => return None,
+        };
+
+        let winner_flor_count = self.seats
+            .iter()
+            .enumerate()
+            .filter(|&(pos, seat)| seat.get_team(pos as u8) == winner)
+            .filter_map(|(_, seat)| flor::Flor::from_cards(&seat.face_up_cards, self.marker))
+            .count() as u8;
+
+        let total_flor_count = self.seats
+            .iter()
+            .enumerate()
+            .filter_map(|(_, seat)| flor::Flor::from_cards(&seat.face_up_cards, self.marker))
+            .count() as u8;
+
+        // Compute resto
+        let max_score = self.game.scoreboard.current_cama_score().max();
+        let cama_win_score = self.game.scoreboard.game_config.cama_win_score;
+        let resto = cama_win_score - max_score;
+
+        let score = match game_bet.agreed_bet {
+            flor::Bet::Announced => winner_flor_count * 3,
+            flor::Bet::Envit => total_flor_count * 3,
+            flor::Bet::Resto => total_flor_count * 3 + resto,
+        };
+
+        Some(scoreboard::RoundScoreSection(winner, score))
     }
 }
 
@@ -366,6 +456,426 @@ mod tests {
             agreed_bet: ali::Bet::Announced,
         });
         assert_eq!(round.ali_bet, expected);
+    }
+
+    #[test]
+    fn get_flor_winner_from_cards_no_flor() {
+        let game = Game::new(vec![Player::new("a")]);
+        let mut round = Round::new(&game, &game.players[0], deck::Deck::default());
+
+        round.marker = deck::Card {
+            suit: deck::Suit::Oros,
+            value: deck::Value::Uno,
+        };
+
+        round.seats = vec![
+            // No flor
+            Seat {
+                player: &game.players[0],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Uno,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Bastos,
+                        value: deck::Value::Dos,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Tres,
+                    },
+                ],
+            },
+        ];
+
+        assert!(round.get_flor_winner_from_cards().is_none());
+    }
+
+    #[test]
+    fn get_flor_winner_from_cards() {
+        let game = Game::new(vec![Player::new("a")]);
+        let mut round = Round::new(&game, &game.players[0], deck::Deck::default());
+
+        round.marker = deck::Card {
+            suit: deck::Suit::Oros,
+            value: deck::Value::Uno,
+        };
+
+        round.seats = vec![
+            // No flor
+            Seat {
+                player: &game.players[0],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Uno,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Bastos,
+                        value: deck::Value::Dos,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Tres,
+                    },
+                ],
+            },
+            // Low Flor
+            Seat {
+                player: &game.players[0],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Uno,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Dos,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Tres,
+                    },
+                ],
+            },
+            // Medium Flor
+            Seat {
+                player: &game.players[0],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Cinco,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Seis,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Siete,
+                    },
+                ],
+            },
+            // High Flor
+            Seat {
+                player: &game.players[0],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Siete,
+                    },
+                    deck::Card {
+                        suit: round.marker.suit,
+                        value: deck::Value::Sota,
+                    },
+                    deck::Card {
+                        suit: round.marker.suit,
+                        value: deck::Value::Caballo,
+                    },
+                ],
+            },
+        ];
+
+        let expected = Some(Team::Team2);
+        assert_eq!(round.get_flor_winner_from_cards(), expected);
+    }
+
+    #[test]
+    fn get_flor_winner_from_cards_tie_wins_hand() {
+        let game = Game::new(vec![
+            Player::new("a"),
+            Player::new("b"),
+            Player::new("c"),
+            Player::new("d"),
+        ]);
+        let mut round = Round::new(&game, &game.players[1], deck::Deck::default());
+
+        round.seats = vec![
+            // No flor
+            Seat {
+                player: &game.players[0],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Uno,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Bastos,
+                        value: deck::Value::Dos,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Tres,
+                    },
+                ],
+            },
+            // 35
+            Seat {
+                player: &game.players[1],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Tres,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Cinco,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Siete,
+                    },
+                ],
+            },
+            // 35
+            Seat {
+                player: &game.players[2],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Cuatro,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Cinco,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Seis,
+                    },
+                ],
+            },
+            // 35
+            Seat {
+                player: &game.players[3],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Bastos,
+                        value: deck::Value::Tres,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Bastos,
+                        value: deck::Value::Cinco,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Bastos,
+                        value: deck::Value::Siete,
+                    },
+                ],
+            },
+        ];
+
+        let expected = Some(Team::Team1);
+        assert_eq!(round.get_flor_winner_from_cards(), expected);
+    }
+
+    fn flor_tests_round_fixture(game: &Game) -> Round {
+        let mut round = Round::new(game, &game.players[0], deck::Deck::default());
+
+        round.seats = vec![
+            // 34
+            Seat {
+                player: &game.players[0],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Tres,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Cinco,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Seis,
+                    },
+                ],
+            },
+            // 35
+            Seat {
+                player: &game.players[1],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Tres,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Cinco,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Siete,
+                    },
+                ],
+            },
+            // 35
+            Seat {
+                player: &game.players[0],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Tres,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Cinco,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Siete,
+                    },
+                ],
+            },
+            // 34
+            Seat {
+                player: &game.players[1],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Tres,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Cinco,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Seis,
+                    },
+                ],
+            },
+        ];
+
+        round
+    }
+
+    #[test]
+    fn get_flor_score_not_announced() {
+        let game = Game::new(vec![Player::new("a"), Player::new("b")]);
+        let mut round = flor_tests_round_fixture(&game);
+
+        assert!(round.get_flor_score().is_none())
+    }
+
+    #[test]
+    fn get_flor_score_announced_no_flor() {
+        // This situation should be impossible! Testing as it can be done in code anyway
+        let game = Game::new(vec![Player::new("a"), Player::new("b")]);
+        let mut round = Round::new(&game, &game.players[0], deck::Deck::default());
+        round.set_flor_bet(flor::Bet::Envit, None);
+
+        round.seats = vec![
+            // No flor
+            Seat {
+                player: &game.players[0],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Siete,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Bastos,
+                        value: deck::Value::Sota,
+                    },
+                    deck::Card {
+                        suit: round.marker.suit,
+                        value: deck::Value::Caballo,
+                    },
+                ],
+                hand: vec![],
+            },
+        ];
+
+        assert!(round.get_flor_score().is_none())
+    }
+
+    #[test]
+    fn get_flor_score_announced_won_bet() {
+        let game = Game::new(vec![Player::new("a"), Player::new("b")]);
+        let mut round = flor_tests_round_fixture(&game);
+        round.set_flor_bet(flor::Bet::Announced, Some(Team::Team2));
+
+        let expected = Some(scoreboard::RoundScoreSection(Team::Team2, 6));
+        assert_eq!(round.get_flor_score(), expected);
+    }
+
+    #[test]
+    fn get_flor_score_announced_won_from_cards() {
+        let game = Game::new(vec![Player::new("a"), Player::new("b")]);
+        let mut round = flor_tests_round_fixture(&game);
+        round.set_flor_bet(flor::Bet::Announced, None);
+
+        let expected = Some(scoreboard::RoundScoreSection(Team::Team2, 6));
+        assert_eq!(round.get_flor_score(), expected);
+    }
+
+    #[test]
+    fn get_flor_score_envit_won_bet() {
+        let game = Game::new(vec![Player::new("a"), Player::new("b")]);
+        let mut round = flor_tests_round_fixture(&game);
+        round.set_flor_bet(flor::Bet::Envit, Some(Team::Team2));
+
+        let expected = Some(scoreboard::RoundScoreSection(Team::Team2, 12));
+        assert_eq!(round.get_flor_score(), expected);
+    }
+
+    #[test]
+    fn get_flor_score_envit_won_from_cards() {
+        let game = Game::new(vec![Player::new("a"), Player::new("b")]);
+        let mut round = flor_tests_round_fixture(&game);
+        round.set_flor_bet(flor::Bet::Envit, None);
+
+        let expected = Some(scoreboard::RoundScoreSection(Team::Team2, 12));
+        assert_eq!(round.get_flor_score(), expected);
+    }
+
+    #[test]
+    fn get_flor_score_resto_won_bet() {
+        let mut game = Game::new(vec![Player::new("a"), Player::new("b")]);
+        game.scoreboard.annotate(scoreboard::RoundScore {
+            rey: None,
+            flor: None,
+            secansa: None,
+            ali: None,
+            truc: scoreboard::RoundScoreSection(Team::Team1, 25),
+        });
+        let mut round = flor_tests_round_fixture(&game);
+        round.set_flor_bet(flor::Bet::Resto, Some(Team::Team2));
+
+        let expected = Some(scoreboard::RoundScoreSection(Team::Team2, 27));
+        assert_eq!(round.get_flor_score(), expected);
+    }
+
+    #[test]
+    fn get_flor_score_resto_won_from_cards() {
+        let mut game = Game::new(vec![Player::new("a"), Player::new("b")]);
+        game.scoreboard.annotate(scoreboard::RoundScore {
+            rey: None,
+            flor: None,
+            secansa: None,
+            ali: None,
+            truc: scoreboard::RoundScoreSection(Team::Team1, 25),
+        });
+        let mut round = flor_tests_round_fixture(&game);
+        round.set_flor_bet(flor::Bet::Resto, None);
+
+        let expected = Some(scoreboard::RoundScoreSection(Team::Team2, 27));
+        assert_eq!(round.get_flor_score(), expected);
     }
 
 }
