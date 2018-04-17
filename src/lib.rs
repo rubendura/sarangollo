@@ -153,8 +153,8 @@ impl<'a> Round<'a> {
     fn get_round_score(&self) -> scoreboard::RoundScore {
         scoreboard::RoundScore {
             flor: self.get_flor_score(),
-            secansa: None,
             ali: None,
+            secansa: self.get_secansa_score(),
             rey: None,
             truc: scoreboard::RoundScoreSection(Team::Team1, 0),
         }
@@ -236,6 +236,76 @@ impl<'a> Round<'a> {
         };
 
         Some(scoreboard::RoundScoreSection(winner, score))
+    }
+
+    fn get_secansa_winner_from_cards(&self) -> Option<Team> {
+        let mut secansas_by_team = self.seats
+            .iter()
+
+            // Enumerate each seat's position
+            .enumerate()
+
+            // Set the first item to the hand, that is, the seat after the dealer (+1)
+            .cycle()
+            .skip(self.dealer_position() + 1)
+            .take(self.seats.len())
+
+            // Remove any seats without secansa and map them to a team
+            .filter_map(|(pos, seat)| {
+                let secansa = secansa::Secansa::from_cards(&seat.face_up_cards);
+                let team = seat.get_team(pos as u8);
+                match secansa {
+                    Some(secansa) => Some((team, secansa)),
+                    None => None,
+                }
+            })
+            .collect::<Vec<_>>();
+
+        // Iterator::max_by returns the last element that matches. We need the first.
+        secansas_by_team.reverse();
+
+        secansas_by_team
+            .into_iter()
+            // https://stackoverflow.com/a/49312019/2221217
+            .max_by(|&(_, ref secansa1), &(_, ref secansa2)| secansa1.cmp(secansa2))
+            .map(|(team, _)| team)
+    }
+
+    fn get_secansa_score(&self) -> Option<scoreboard::RoundScoreSection> {
+        // Game must've been announced to be scored
+        let game_bet = match self.secansa_bet {
+            Some(game_bet) => game_bet,
+            None => return None,
+        };
+
+        let cards_winner = self.get_secansa_winner_from_cards();
+
+        let winner = match (game_bet.winner, cards_winner) {
+            // If there was a rejected bet, we've got a direct winner
+            (Some(winner), _) => winner,
+            // Otherwise get the winner from the facing up cards
+            (None, Some(winner)) => winner,
+            // If there still no winner, we can't score anything
+            _ => return None,
+        };
+
+        let games_value: u8 = self.seats
+            .iter()
+            .enumerate()
+            .filter(|&(pos, seat)| seat.get_team(pos as u8) == winner)
+            .filter_map(|(_, seat)| secansa::Secansa::from_cards(&seat.face_up_cards))
+            .map(|secansa| secansa.score())
+            .sum();
+
+        let extra = match game_bet.agreed_bet {
+            secansa::Bet::Envit => 1,
+            secansa::Bet::Val(extra) => extra - 1, // e.g.: tres val gives 2 points
+            _ => 0,
+        };
+
+        let total = games_value + extra;
+
+        Some(scoreboard::RoundScoreSection(winner, total))
     }
 }
 
@@ -457,6 +527,8 @@ mod tests {
         });
         assert_eq!(round.ali_bet, expected);
     }
+
+    // Flor bets
 
     #[test]
     fn get_flor_winner_from_cards_no_flor() {
@@ -704,7 +776,7 @@ mod tests {
             },
             // 35
             Seat {
-                player: &game.players[1],
+                player: &game.players[0],
                 hand: vec![],
                 face_up_cards: vec![
                     deck::Card {
@@ -742,7 +814,7 @@ mod tests {
             },
             // 34
             Seat {
-                player: &game.players[1],
+                player: &game.players[0],
                 hand: vec![],
                 face_up_cards: vec![
                     deck::Card {
@@ -767,7 +839,7 @@ mod tests {
     #[test]
     fn get_flor_score_not_announced() {
         let game = Game::new(vec![Player::new("a"), Player::new("b")]);
-        let mut round = flor_tests_round_fixture(&game);
+        let round = flor_tests_round_fixture(&game);
 
         assert!(round.get_flor_score().is_none())
     }
@@ -878,4 +950,397 @@ mod tests {
         assert_eq!(round.get_flor_score(), expected);
     }
 
+    // Secansa bets
+
+    #[test]
+    fn get_secansa_winner_from_cards_no_secansa() {
+        let game = Game::new(vec![Player::new("a")]);
+        let mut round = Round::new(&game, &game.players[0], deck::Deck::default());
+
+        round.seats = vec![
+            // No secansa
+            Seat {
+                player: &game.players[0],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Uno,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Tres,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Cinco,
+                    },
+                ],
+            },
+        ];
+
+        assert!(round.get_secansa_winner_from_cards().is_none());
+    }
+
+    #[test]
+    fn get_secansa_winner_from_cards() {
+        let game = Game::new(vec![Player::new("a")]);
+        let mut round = Round::new(&game, &game.players[0], deck::Deck::default());
+
+        round.seats = vec![
+            // No secansa
+            Seat {
+                player: &game.players[0],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Uno,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Tres,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Cinco,
+                    },
+                ],
+            },
+            // Two card secansa
+            Seat {
+                player: &game.players[0],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Uno,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Bastos,
+                        value: deck::Value::Dos,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Cinco,
+                    },
+                ],
+            },
+            // Secansa real
+            Seat {
+                player: &game.players[0],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Sota,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Caballo,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Espadas,
+                        value: deck::Value::Rey,
+                    },
+                ],
+            },
+            // Three card secansa
+            Seat {
+                player: &game.players[0],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Uno,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Bastos,
+                        value: deck::Value::Dos,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Tres,
+                    },
+                ],
+            },
+        ];
+
+        let expected = Some(Team::Team1);
+        assert_eq!(round.get_secansa_winner_from_cards(), expected);
+    }
+
+    #[test]
+    fn get_secansa_winner_from_cards_tie_wins_hand() {
+        let game = Game::new(vec![
+            Player::new("a"),
+            Player::new("b"),
+            Player::new("c"),
+            Player::new("d"),
+        ]);
+        let mut round = Round::new(&game, &game.players[1], deck::Deck::default());
+
+        round.seats = vec![
+            // No secansa
+            Seat {
+                player: &game.players[0],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Uno,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Espadas,
+                        value: deck::Value::Tres,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Cinco,
+                    },
+                ],
+            },
+            // Secansa real
+            Seat {
+                player: &game.players[1],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Sota,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Bastos,
+                        value: deck::Value::Caballo,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Rey,
+                    },
+                ],
+            },
+            // Secansa real
+            Seat {
+                player: &game.players[2],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Sota,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Caballo,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Bastos,
+                        value: deck::Value::Rey,
+                    },
+                ],
+            },
+            // Secansa real
+            Seat {
+                player: &game.players[3],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Sota,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Bastos,
+                        value: deck::Value::Caballo,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Rey,
+                    },
+                ],
+            },
+        ];
+
+        let expected = Some(Team::Team1);
+        assert_eq!(round.get_secansa_winner_from_cards(), expected);
+    }
+
+    fn secansa_tests_round_fixture(game: &Game) -> Round {
+        let mut round = Round::new(game, &game.players[0], deck::Deck::default());
+
+        round.seats = vec![
+            Seat {
+                player: &game.players[0],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Cinco,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Seis,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Sota,
+                    },
+                ],
+            },
+            Seat {
+                player: &game.players[0],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Sota,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Bastos,
+                        value: deck::Value::Caballo,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Espadas,
+                        value: deck::Value::Rey,
+                    },
+                ],
+            },
+            Seat {
+                player: &game.players[0],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Sota,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Espadas,
+                        value: deck::Value::Caballo,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Bastos,
+                        value: deck::Value::Rey,
+                    },
+                ],
+            },
+            Seat {
+                player: &game.players[0],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Cinco,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Seis,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Siete,
+                    },
+                ],
+            },
+        ];
+
+        round
+    }
+
+    #[test]
+    fn get_secansa_score_not_announced() {
+        let game = Game::new(vec![Player::new("a"), Player::new("b")]);
+        let round = secansa_tests_round_fixture(&game);
+
+        assert!(round.get_secansa_score().is_none())
+    }
+
+    #[test]
+    fn get_secansa_score_announced_no_secansa() {
+        // This situation should be impossible! Testing as it can be done in code anyway
+        let game = Game::new(vec![Player::new("a"), Player::new("b")]);
+        let mut round = Round::new(&game, &game.players[0], deck::Deck::default());
+        round.set_secansa_bet(secansa::Bet::Envit, None);
+
+        round.seats = vec![
+            // No secansa
+            Seat {
+                player: &game.players[0],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Siete,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Bastos,
+                        value: deck::Value::Tres,
+                    },
+                    deck::Card {
+                        suit: round.marker.suit,
+                        value: deck::Value::Caballo,
+                    },
+                ],
+                hand: vec![],
+            },
+        ];
+
+        assert!(round.get_secansa_score().is_none())
+    }
+
+    #[test]
+    fn get_secansa_score_announced_won_bet() {
+        let game = Game::new(vec![Player::new("a"), Player::new("b")]);
+        let mut round = secansa_tests_round_fixture(&game);
+        round.set_secansa_bet(secansa::Bet::Announced, Some(Team::Team1));
+
+        let expected = Some(scoreboard::RoundScoreSection(Team::Team1, 4));
+        assert_eq!(round.get_secansa_score(), expected);
+    }
+
+    #[test]
+    fn get_secansa_score_announced_won_from_cards() {
+        let game = Game::new(vec![Player::new("a"), Player::new("b")]);
+        let mut round = secansa_tests_round_fixture(&game);
+        round.set_secansa_bet(secansa::Bet::Announced, None);
+
+        let expected = Some(scoreboard::RoundScoreSection(Team::Team2, 6));
+        assert_eq!(round.get_secansa_score(), expected);
+    }
+
+    #[test]
+    fn get_secansa_score_envit_won_bet() {
+        let game = Game::new(vec![Player::new("a"), Player::new("b")]);
+        let mut round = secansa_tests_round_fixture(&game);
+        round.set_secansa_bet(secansa::Bet::Envit, Some(Team::Team1));
+
+        let expected = Some(scoreboard::RoundScoreSection(Team::Team1, 5));
+        assert_eq!(round.get_secansa_score(), expected);
+    }
+
+    #[test]
+    fn get_secansa_score_envit_won_from_cards() {
+        let game = Game::new(vec![Player::new("a"), Player::new("b")]);
+        let mut round = secansa_tests_round_fixture(&game);
+        round.set_secansa_bet(secansa::Bet::Envit, None);
+
+        let expected = Some(scoreboard::RoundScoreSection(Team::Team2, 7));
+        assert_eq!(round.get_secansa_score(), expected);
+    }
+
+    #[test]
+    fn get_secansa_score_tres_val_won_bet() {
+        let game = Game::new(vec![Player::new("a"), Player::new("b")]);
+        let mut round = secansa_tests_round_fixture(&game);
+        round.set_secansa_bet(secansa::Bet::Val(3), Some(Team::Team1));
+
+        let expected = Some(scoreboard::RoundScoreSection(Team::Team1, 6));
+        assert_eq!(round.get_secansa_score(), expected);
+    }
+
+    #[test]
+    fn get_secansa_score_tres_val_won_from_cards() {
+        let game = Game::new(vec![Player::new("a"), Player::new("b")]);
+        let mut round = secansa_tests_round_fixture(&game);
+        round.set_secansa_bet(secansa::Bet::Val(3), None);
+
+        let expected = Some(scoreboard::RoundScoreSection(Team::Team2, 8));
+        assert_eq!(round.get_secansa_score(), expected);
+    }
 }
