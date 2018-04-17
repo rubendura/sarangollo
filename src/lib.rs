@@ -153,8 +153,8 @@ impl<'a> Round<'a> {
     fn get_round_score(&self) -> scoreboard::RoundScore {
         scoreboard::RoundScore {
             flor: self.get_flor_score(),
-            ali: None,
             secansa: self.get_secansa_score(),
+            ali: self.get_ali_score(),
             rey: None,
             truc: scoreboard::RoundScoreSection(Team::Team1, 0),
         }
@@ -300,6 +300,76 @@ impl<'a> Round<'a> {
         let extra = match game_bet.agreed_bet {
             secansa::Bet::Envit => 1,
             secansa::Bet::Val(extra) => extra - 1, // e.g.: tres val gives 2 points
+            _ => 0,
+        };
+
+        let total = games_value + extra;
+
+        Some(scoreboard::RoundScoreSection(winner, total))
+    }
+
+    fn get_ali_winner_from_cards(&self) -> Option<Team> {
+        let mut alis_by_team = self.seats
+            .iter()
+
+            // Enumerate each seat's position
+            .enumerate()
+
+            // Set the first item to the hand, that is, the seat after the dealer (+1)
+            .cycle()
+            .skip(self.dealer_position() + 1)
+            .take(self.seats.len())
+
+            // Remove any seats without ali and map them to a team
+            .filter_map(|(pos, seat)| {
+                let ali = ali::Ali::from_cards(&seat.face_up_cards);
+                let team = seat.get_team(pos as u8);
+                match ali {
+                    Some(ali) => Some((team, ali)),
+                    None => None,
+                }
+            })
+            .collect::<Vec<_>>();
+
+        // Iterator::max_by returns the last element that matches. We need the first.
+        alis_by_team.reverse();
+
+        alis_by_team
+            .into_iter()
+            // https://stackoverflow.com/a/49312019/2221217
+            .max_by(|&(_, ref ali1), &(_, ref ali2)| ali1.cmp(ali2))
+            .map(|(team, _)| team)
+    }
+
+    fn get_ali_score(&self) -> Option<scoreboard::RoundScoreSection> {
+        // Game must've been announced to be scored
+        let game_bet = match self.ali_bet {
+            Some(game_bet) => game_bet,
+            None => return None,
+        };
+
+        let cards_winner = self.get_ali_winner_from_cards();
+
+        let winner = match (game_bet.winner, cards_winner) {
+            // If there was a rejected bet, we've got a direct winner
+            (Some(winner), _) => winner,
+            // Otherwise get the winner from the facing up cards
+            (None, Some(winner)) => winner,
+            // If there still no winner, we can't score anything
+            _ => return None,
+        };
+
+        let games_value: u8 = self.seats
+            .iter()
+            .enumerate()
+            .filter(|&(pos, seat)| seat.get_team(pos as u8) == winner)
+            .filter_map(|(_, seat)| ali::Ali::from_cards(&seat.face_up_cards))
+            .map(|ali| ali.score())
+            .sum();
+
+        let extra = match game_bet.agreed_bet {
+            ali::Bet::Envit => 1,
+            ali::Bet::Val(extra) => extra - 1, // e.g.: tres val gives 2 points
             _ => 0,
         };
 
@@ -1342,5 +1412,399 @@ mod tests {
 
         let expected = Some(scoreboard::RoundScoreSection(Team::Team2, 8));
         assert_eq!(round.get_secansa_score(), expected);
+    }
+
+    // Ali bets
+
+    #[test]
+    fn get_ali_winner_from_cards_no_ali() {
+        let game = Game::new(vec![Player::new("a")]);
+        let mut round = Round::new(&game, &game.players[0], deck::Deck::default());
+
+        round.seats = vec![
+            // No ali
+            Seat {
+                player: &game.players[0],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Uno,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Tres,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Cinco,
+                    },
+                ],
+            },
+        ];
+
+        assert!(round.get_ali_winner_from_cards().is_none());
+    }
+
+    #[test]
+    fn get_ali_winner_from_cards() {
+        let game = Game::new(vec![Player::new("a")]);
+        let mut round = Round::new(&game, &game.players[0], deck::Deck::default());
+
+        round.seats = vec![
+            // No ali
+            Seat {
+                player: &game.players[0],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Uno,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Tres,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Cinco,
+                    },
+                ],
+            },
+            // Two card ali
+            Seat {
+                player: &game.players[0],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Uno,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Bastos,
+                        value: deck::Value::Cinco,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Cinco,
+                    },
+                ],
+            },
+            // ali aces
+            Seat {
+                player: &game.players[0],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Uno,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Uno,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Espadas,
+                        value: deck::Value::Dos,
+                    },
+                ],
+            },
+            // Three card ali
+            Seat {
+                player: &game.players[0],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Caballo,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Bastos,
+                        value: deck::Value::Caballo,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Caballo,
+                    },
+                ],
+            },
+        ];
+
+        let expected = Some(Team::Team2);
+        assert_eq!(round.get_ali_winner_from_cards(), expected);
+    }
+
+    #[test]
+    fn get_ali_winner_from_cards_tie_wins_hand() {
+        let game = Game::new(vec![
+            Player::new("a"),
+            Player::new("b"),
+            Player::new("c"),
+            Player::new("d"),
+        ]);
+        let mut round = Round::new(&game, &game.players[1], deck::Deck::default());
+
+        round.seats = vec![
+            // No ali
+            Seat {
+                player: &game.players[0],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Uno,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Espadas,
+                        value: deck::Value::Tres,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Cinco,
+                    },
+                ],
+            },
+            // ali aces
+            Seat {
+                player: &game.players[1],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Uno,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Bastos,
+                        value: deck::Value::Uno,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Uno,
+                    },
+                ],
+            },
+            // ali aces
+            Seat {
+                player: &game.players[2],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Uno,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Uno,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Bastos,
+                        value: deck::Value::Uno,
+                    },
+                ],
+            },
+            // ali aces
+            Seat {
+                player: &game.players[3],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Uno,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Bastos,
+                        value: deck::Value::Uno,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Uno,
+                    },
+                ],
+            },
+        ];
+
+        let expected = Some(Team::Team1);
+        assert_eq!(round.get_ali_winner_from_cards(), expected);
+    }
+
+    fn ali_tests_round_fixture(game: &Game) -> Round {
+        let mut round = Round::new(game, &game.players[0], deck::Deck::default());
+
+        round.seats = vec![
+            Seat {
+                player: &game.players[0],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Cinco,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Cinco,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Sota,
+                    },
+                ],
+            },
+            Seat {
+                player: &game.players[0],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Uno,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Bastos,
+                        value: deck::Value::Uno,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Espadas,
+                        value: deck::Value::Uno,
+                    },
+                ],
+            },
+            Seat {
+                player: &game.players[0],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Uno,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Espadas,
+                        value: deck::Value::Uno,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Bastos,
+                        value: deck::Value::Uno,
+                    },
+                ],
+            },
+            Seat {
+                player: &game.players[0],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Tres,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Tres,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Tres,
+                    },
+                ],
+            },
+        ];
+
+        round
+    }
+
+    #[test]
+    fn get_ali_score_not_announced() {
+        let game = Game::new(vec![Player::new("a"), Player::new("b")]);
+        let round = ali_tests_round_fixture(&game);
+
+        assert!(round.get_ali_score().is_none())
+    }
+
+    #[test]
+    fn get_ali_score_announced_no_ali() {
+        // This situation should be impossible! Testing as it can be done in code anyway
+        let game = Game::new(vec![Player::new("a"), Player::new("b")]);
+        let mut round = Round::new(&game, &game.players[0], deck::Deck::default());
+        round.set_ali_bet(ali::Bet::Envit, None);
+
+        round.seats = vec![
+            // No ali
+            Seat {
+                player: &game.players[0],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Siete,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Bastos,
+                        value: deck::Value::Tres,
+                    },
+                    deck::Card {
+                        suit: round.marker.suit,
+                        value: deck::Value::Caballo,
+                    },
+                ],
+                hand: vec![],
+            },
+        ];
+
+        assert!(round.get_ali_score().is_none())
+    }
+
+    #[test]
+    fn get_ali_score_announced_won_bet() {
+        let game = Game::new(vec![Player::new("a"), Player::new("b")]);
+        let mut round = ali_tests_round_fixture(&game);
+        round.set_ali_bet(ali::Bet::Announced, Some(Team::Team1));
+
+        let expected = Some(scoreboard::RoundScoreSection(Team::Team1, 7));
+        assert_eq!(round.get_ali_score(), expected);
+    }
+
+    #[test]
+    fn get_ali_score_announced_won_from_cards() {
+        let game = Game::new(vec![Player::new("a"), Player::new("b")]);
+        let mut round = ali_tests_round_fixture(&game);
+        round.set_ali_bet(ali::Bet::Announced, None);
+
+        let expected = Some(scoreboard::RoundScoreSection(Team::Team2, 9));
+        assert_eq!(round.get_ali_score(), expected);
+    }
+
+    #[test]
+    fn get_ali_score_envit_won_bet() {
+        let game = Game::new(vec![Player::new("a"), Player::new("b")]);
+        let mut round = ali_tests_round_fixture(&game);
+        round.set_ali_bet(ali::Bet::Envit, Some(Team::Team1));
+
+        let expected = Some(scoreboard::RoundScoreSection(Team::Team1, 8));
+        assert_eq!(round.get_ali_score(), expected);
+    }
+
+    #[test]
+    fn get_ali_score_envit_won_from_cards() {
+        let game = Game::new(vec![Player::new("a"), Player::new("b")]);
+        let mut round = ali_tests_round_fixture(&game);
+        round.set_ali_bet(ali::Bet::Envit, None);
+
+        let expected = Some(scoreboard::RoundScoreSection(Team::Team2, 10));
+        assert_eq!(round.get_ali_score(), expected);
+    }
+
+    #[test]
+    fn get_ali_score_tres_val_won_bet() {
+        let game = Game::new(vec![Player::new("a"), Player::new("b")]);
+        let mut round = ali_tests_round_fixture(&game);
+        round.set_ali_bet(ali::Bet::Val(3), Some(Team::Team1));
+
+        let expected = Some(scoreboard::RoundScoreSection(Team::Team1, 9));
+        assert_eq!(round.get_ali_score(), expected);
+    }
+
+    #[test]
+    fn get_ali_score_tres_val_won_from_cards() {
+        let game = Game::new(vec![Player::new("a"), Player::new("b")]);
+        let mut round = ali_tests_round_fixture(&game);
+        round.set_ali_bet(ali::Bet::Val(3), None);
+
+        let expected = Some(scoreboard::RoundScoreSection(Team::Team2, 11));
+        assert_eq!(round.get_ali_score(), expected);
     }
 }
