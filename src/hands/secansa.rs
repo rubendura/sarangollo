@@ -1,5 +1,6 @@
-use std::cmp::Ordering;
 use deck::Card;
+use hands::Hand;
+use std::cmp::Ordering;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Secansa {
@@ -13,7 +14,21 @@ pub enum Bet {
     Val(u8),
 }
 
+impl<'a> Hand<'a> for Secansa {
+    fn from_cards(cards: &[Card], _marker: Card) -> Option<Self> {
+        Secansa::from_cards_slice(cards)
+    }
+}
+
 impl Secansa {
+    pub fn from_cards_slice(cards: &[Card]) -> Option<Self> {
+        if let Some(cards) = Self::sorted_secansa_cards(cards) {
+            Some(Secansa { cards })
+        } else {
+            None
+        }
+    }
+
     fn is_secansa_3_cards(&self) -> bool {
         self.cards.len() == 3
     }
@@ -42,14 +57,6 @@ impl Secansa {
         // If result vector only has 1 card, no secansa can be formed
         if cards.len() >= 2 {
             Some(cards)
-        } else {
-            None
-        }
-    }
-
-    pub fn from_cards(cards: &[Card]) -> Option<Self> {
-        if let Some(cards) = Self::sorted_secansa_cards(cards) {
-            Some(Secansa { cards })
         } else {
             None
         }
@@ -210,7 +217,11 @@ mod tests {
                 value: Value::Tres,
             },
         ];
-        assert!(Secansa::from_cards(&hand).unwrap().is_secansa_3_cards());
+        assert!(
+            Secansa::from_cards_slice(&hand)
+                .unwrap()
+                .is_secansa_3_cards()
+        );
     }
 
     #[test]
@@ -229,7 +240,9 @@ mod tests {
                 value: Value::Cuatro,
             },
         ];
-        assert!(!Secansa::from_cards(&hand).unwrap().is_secansa_3_cards());
+        assert!(!Secansa::from_cards_slice(&hand)
+            .unwrap()
+            .is_secansa_3_cards());
     }
 
     #[test]
@@ -248,7 +261,7 @@ mod tests {
                 value: Value::Cuatro,
             },
         ];
-        assert_eq!(Secansa::from_cards(&hand).unwrap().score(), 1);
+        assert_eq!(Secansa::from_cards_slice(&hand).unwrap().score(), 1);
     }
 
     #[test]
@@ -267,12 +280,12 @@ mod tests {
                 value: Value::Tres,
             },
         ];
-        assert_eq!(Secansa::from_cards(&hand).unwrap().score(), 3);
+        assert_eq!(Secansa::from_cards_slice(&hand).unwrap().score(), 3);
     }
 
     #[test]
     fn secansa_ordering() {
-        let secansa_3_cards = Secansa::from_cards(&[
+        let secansa_3_cards = Secansa::from_cards_slice(&[
             Card {
                 suit: Suit::Oros,
                 value: Value::Uno,
@@ -286,7 +299,7 @@ mod tests {
                 value: Value::Tres,
             },
         ]);
-        let secansa_real = Secansa::from_cards(&[
+        let secansa_real = Secansa::from_cards_slice(&[
             Card {
                 suit: Suit::Oros,
                 value: Value::Uno,
@@ -300,7 +313,7 @@ mod tests {
                 value: Value::Tres,
             },
         ]);
-        let secansa_2_top = Secansa::from_cards(&[
+        let secansa_2_top = Secansa::from_cards_slice(&[
             Card {
                 suit: Suit::Oros,
                 value: Value::Sota,
@@ -314,7 +327,7 @@ mod tests {
                 value: Value::Tres,
             },
         ]);
-        let secansa_2_low = Secansa::from_cards(&[
+        let secansa_2_low = Secansa::from_cards_slice(&[
             Card {
                 suit: Suit::Oros,
                 value: Value::Dos,
@@ -328,7 +341,7 @@ mod tests {
                 value: Value::Cinco,
             },
         ]);
-        let secansa_2_low_with_high_card = Secansa::from_cards(&[
+        let secansa_2_low_with_high_card = Secansa::from_cards_slice(&[
             Card {
                 suit: Suit::Oros,
                 value: Value::Dos,

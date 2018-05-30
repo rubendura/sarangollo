@@ -1,6 +1,7 @@
-use std::cmp::Ordering;
-use itertools::Itertools;
 use deck::{Card, Value};
+use hands::Hand;
+use itertools::Itertools;
+use std::cmp::Ordering;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct Flor<'a> {
@@ -15,6 +16,16 @@ pub enum Bet {
     Resto,
 }
 
+impl<'a> Hand<'a> for Flor<'a> {
+    fn from_cards(cards: &'a [Card], marker: Card) -> Option<Self> {
+        if Self::is_flor(cards, marker) {
+            Some(Flor { cards, marker })
+        } else {
+            None
+        }
+    }
+}
+
 impl<'a> Flor<'a> {
     fn is_flor(cards: &[Card], marker: Card) -> bool {
         if cards.len() != 3 {
@@ -26,14 +37,6 @@ impl<'a> Flor<'a> {
             .filter(|card| !card.is_perica(marker))
             .map(|card| card.suit)
             .all_equal()
-    }
-
-    pub fn from_cards(cards: &'a [Card], marker: Card) -> Option<Self> {
-        if Self::is_flor(cards, marker) {
-            Some(Flor { cards, marker })
-        } else {
-            None
-        }
     }
 
     fn value(&self) -> u8 {

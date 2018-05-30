@@ -3,10 +3,10 @@ extern crate itertools;
 extern crate rand;
 
 mod deck;
-pub mod scoreboard;
 mod hands;
+pub mod scoreboard;
 
-use hands::{ali, flor, secansa};
+use hands::{ali, flor, secansa, Hand};
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum Team {
@@ -160,8 +160,8 @@ impl<'a> Round<'a> {
         }
     }
 
-    fn get_flor_winner_from_cards(&self) -> Option<Team> {
-        let mut flors_by_team = self.seats
+    fn iter_from_hand(&self) -> impl Iterator<Item = (Team, &Seat)> {
+        self.seats
             .iter()
 
             // Enumerate each seat's position
@@ -172,24 +172,35 @@ impl<'a> Round<'a> {
             .skip(self.dealer_position() + 1)
             .take(self.seats.len())
 
-            // Remove any seats without flor and map them to a team
-            .filter_map(|(pos, seat)| {
-                let flor = flor::Flor::from_cards(&seat.face_up_cards, self.marker);
+            .map(|(pos, seat)| {
                 let team = seat.get_team(pos as u8);
-                match flor {
-                    Some(flor) => Some((team, flor)),
+                (team, seat)
+            })
+    }
+
+    fn get_winner_from_cards<'b, H>(&'b self) -> Option<Team>
+    where
+        H: Hand<'b>,
+    {
+        // Remove any seats without the hand
+        let mut hands_by_team = self.iter_from_hand()
+            .filter_map(|(team, seat)| {
+                let face_up_cards = &seat.face_up_cards;
+                let hand = H::from_cards(face_up_cards, self.marker);
+                match hand {
+                    Some(hand) => Some((team, hand)),
                     None => None,
                 }
             })
             .collect::<Vec<_>>();
 
         // Iterator::max_by returns the last element that matches. We need the first.
-        flors_by_team.reverse();
+        hands_by_team.reverse();
 
-        flors_by_team
+        hands_by_team
             .into_iter()
             // https://stackoverflow.com/a/49312019/2221217
-            .max_by(|&(_, ref flor1), &(_, ref flor2)| flor1.cmp(flor2))
+            .max_by(|&(_, ref hand1), &(_, ref hand2)| hand1.cmp(hand2))
             .map(|(team, _)| team)
     }
 
@@ -200,7 +211,7 @@ impl<'a> Round<'a> {
             None => return None,
         };
 
-        let cards_winner = self.get_flor_winner_from_cards();
+        let cards_winner = self.get_winner_from_cards::<flor::Flor>();
 
         let winner = match (game_bet.winner, cards_winner) {
             // If there was a rejected bet, we've got a direct winner
@@ -238,39 +249,6 @@ impl<'a> Round<'a> {
         Some(scoreboard::RoundScoreSection(winner, score))
     }
 
-    fn get_secansa_winner_from_cards(&self) -> Option<Team> {
-        let mut secansas_by_team = self.seats
-            .iter()
-
-            // Enumerate each seat's position
-            .enumerate()
-
-            // Set the first item to the hand, that is, the seat after the dealer (+1)
-            .cycle()
-            .skip(self.dealer_position() + 1)
-            .take(self.seats.len())
-
-            // Remove any seats without secansa and map them to a team
-            .filter_map(|(pos, seat)| {
-                let secansa = secansa::Secansa::from_cards(&seat.face_up_cards);
-                let team = seat.get_team(pos as u8);
-                match secansa {
-                    Some(secansa) => Some((team, secansa)),
-                    None => None,
-                }
-            })
-            .collect::<Vec<_>>();
-
-        // Iterator::max_by returns the last element that matches. We need the first.
-        secansas_by_team.reverse();
-
-        secansas_by_team
-            .into_iter()
-            // https://stackoverflow.com/a/49312019/2221217
-            .max_by(|&(_, ref secansa1), &(_, ref secansa2)| secansa1.cmp(secansa2))
-            .map(|(team, _)| team)
-    }
-
     fn get_secansa_score(&self) -> Option<scoreboard::RoundScoreSection> {
         // Game must've been announced to be scored
         let game_bet = match self.secansa_bet {
@@ -278,7 +256,7 @@ impl<'a> Round<'a> {
             None => return None,
         };
 
-        let cards_winner = self.get_secansa_winner_from_cards();
+        let cards_winner = self.get_winner_from_cards::<secansa::Secansa>();
 
         let winner = match (game_bet.winner, cards_winner) {
             // If there was a rejected bet, we've got a direct winner
@@ -293,7 +271,7 @@ impl<'a> Round<'a> {
             .iter()
             .enumerate()
             .filter(|&(pos, seat)| seat.get_team(pos as u8) == winner)
-            .filter_map(|(_, seat)| secansa::Secansa::from_cards(&seat.face_up_cards))
+            .filter_map(|(_, seat)| secansa::Secansa::from_cards_slice(&seat.face_up_cards))
             .map(|secansa| secansa.score())
             .sum();
 
@@ -308,39 +286,6 @@ impl<'a> Round<'a> {
         Some(scoreboard::RoundScoreSection(winner, total))
     }
 
-    fn get_ali_winner_from_cards(&self) -> Option<Team> {
-        let mut alis_by_team = self.seats
-            .iter()
-
-            // Enumerate each seat's position
-            .enumerate()
-
-            // Set the first item to the hand, that is, the seat after the dealer (+1)
-            .cycle()
-            .skip(self.dealer_position() + 1)
-            .take(self.seats.len())
-
-            // Remove any seats without ali and map them to a team
-            .filter_map(|(pos, seat)| {
-                let ali = ali::Ali::from_cards(&seat.face_up_cards);
-                let team = seat.get_team(pos as u8);
-                match ali {
-                    Some(ali) => Some((team, ali)),
-                    None => None,
-                }
-            })
-            .collect::<Vec<_>>();
-
-        // Iterator::max_by returns the last element that matches. We need the first.
-        alis_by_team.reverse();
-
-        alis_by_team
-            .into_iter()
-            // https://stackoverflow.com/a/49312019/2221217
-            .max_by(|&(_, ref ali1), &(_, ref ali2)| ali1.cmp(ali2))
-            .map(|(team, _)| team)
-    }
-
     fn get_ali_score(&self) -> Option<scoreboard::RoundScoreSection> {
         // Game must've been announced to be scored
         let game_bet = match self.ali_bet {
@@ -348,7 +293,7 @@ impl<'a> Round<'a> {
             None => return None,
         };
 
-        let cards_winner = self.get_ali_winner_from_cards();
+        let cards_winner = self.get_winner_from_cards::<ali::Ali>();
 
         let winner = match (game_bet.winner, cards_winner) {
             // If there was a rejected bet, we've got a direct winner
@@ -363,7 +308,7 @@ impl<'a> Round<'a> {
             .iter()
             .enumerate()
             .filter(|&(pos, seat)| seat.get_team(pos as u8) == winner)
-            .filter_map(|(_, seat)| ali::Ali::from_cards(&seat.face_up_cards))
+            .filter_map(|(_, seat)| ali::Ali::from_cards_slice(&seat.face_up_cards))
             .map(|ali| ali.score())
             .sum();
 
@@ -458,12 +403,10 @@ mod tests {
     fn discard_bad_card() {
         let mut seat = Seat {
             player: &Player::new("a"),
-            hand: vec![
-                deck::Card {
-                    suit: deck::Suit::Bastos,
-                    value: deck::Value::Caballo,
-                },
-            ],
+            hand: vec![deck::Card {
+                suit: deck::Suit::Bastos,
+                value: deck::Value::Caballo,
+            }],
             face_up_cards: Vec::new(),
         };
         let result = seat.discard(deck::Card {
@@ -496,12 +439,10 @@ mod tests {
     fn show_bad_card() {
         let mut seat = Seat {
             player: &Player::new("a"),
-            hand: vec![
-                deck::Card {
-                    suit: deck::Suit::Bastos,
-                    value: deck::Value::Caballo,
-                },
-            ],
+            hand: vec![deck::Card {
+                suit: deck::Suit::Bastos,
+                value: deck::Value::Caballo,
+            }],
             face_up_cards: Vec::new(),
         };
         let result = seat.show_card(deck::Card {
@@ -632,7 +573,7 @@ mod tests {
             },
         ];
 
-        assert!(round.get_flor_winner_from_cards().is_none());
+        assert!(round.get_winner_from_cards::<flor::Flor>().is_none());
     }
 
     #[test]
@@ -725,7 +666,7 @@ mod tests {
         ];
 
         let expected = Some(Team::Team2);
-        assert_eq!(round.get_flor_winner_from_cards(), expected);
+        assert_eq!(round.get_winner_from_cards::<flor::Flor>(), expected);
     }
 
     #[test]
@@ -818,7 +759,7 @@ mod tests {
         ];
 
         let expected = Some(Team::Team1);
-        assert_eq!(round.get_flor_winner_from_cards(), expected);
+        assert_eq!(round.get_winner_from_cards::<flor::Flor>(), expected);
     }
 
     fn flor_tests_round_fixture(game: &Game) -> Round {
@@ -1049,7 +990,7 @@ mod tests {
             },
         ];
 
-        assert!(round.get_secansa_winner_from_cards().is_none());
+        assert!(round.get_winner_from_cards::<secansa::Secansa>().is_none());
     }
 
     #[test]
@@ -1137,7 +1078,7 @@ mod tests {
         ];
 
         let expected = Some(Team::Team1);
-        assert_eq!(round.get_secansa_winner_from_cards(), expected);
+        assert_eq!(round.get_winner_from_cards::<secansa::Secansa>(), expected);
     }
 
     #[test]
@@ -1230,7 +1171,7 @@ mod tests {
         ];
 
         let expected = Some(Team::Team1);
-        assert_eq!(round.get_secansa_winner_from_cards(), expected);
+        assert_eq!(round.get_winner_from_cards::<secansa::Secansa>(), expected);
     }
 
     fn secansa_tests_round_fixture(game: &Game) -> Round {
@@ -1443,7 +1384,7 @@ mod tests {
             },
         ];
 
-        assert!(round.get_ali_winner_from_cards().is_none());
+        assert!(round.get_winner_from_cards::<ali::Ali>().is_none());
     }
 
     #[test]
@@ -1531,7 +1472,7 @@ mod tests {
         ];
 
         let expected = Some(Team::Team2);
-        assert_eq!(round.get_ali_winner_from_cards(), expected);
+        assert_eq!(round.get_winner_from_cards::<ali::Ali>(), expected);
     }
 
     #[test]
@@ -1624,7 +1565,7 @@ mod tests {
         ];
 
         let expected = Some(Team::Team1);
-        assert_eq!(round.get_ali_winner_from_cards(), expected);
+        assert_eq!(round.get_winner_from_cards::<ali::Ali>(), expected);
     }
 
     fn ali_tests_round_fixture(game: &Game) -> Round {
