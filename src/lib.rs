@@ -206,10 +206,7 @@ impl<'a> Round<'a> {
 
     fn get_flor_score(&self) -> Option<scoreboard::RoundScoreSection> {
         // Game must've been announced to be scored
-        let game_bet = match self.flor_bet {
-            Some(game_bet) => game_bet,
-            None => return None,
-        };
+        let game_bet = self.flor_bet?;
 
         let cards_winner = self.get_winner_from_cards::<flor::Flor>();
 
@@ -251,10 +248,7 @@ impl<'a> Round<'a> {
 
     fn get_secansa_score(&self) -> Option<scoreboard::RoundScoreSection> {
         // Game must've been announced to be scored
-        let game_bet = match self.secansa_bet {
-            Some(game_bet) => game_bet,
-            None => return None,
-        };
+        let game_bet = self.secansa_bet?;
 
         let cards_winner = self.get_winner_from_cards::<secansa::Secansa>();
 
@@ -288,10 +282,7 @@ impl<'a> Round<'a> {
 
     fn get_ali_score(&self) -> Option<scoreboard::RoundScoreSection> {
         // Game must've been announced to be scored
-        let game_bet = match self.ali_bet {
-            Some(game_bet) => game_bet,
-            None => return None,
-        };
+        let game_bet = self.ali_bet?;
 
         let cards_winner = self.get_winner_from_cards::<ali::Ali>();
 
