@@ -5,30 +5,44 @@ use GameBet;
 use Round;
 use Team;
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum AgreedBet {
+    // Announced and Envit can be agreed but we gotta check the cards to get the winner
+    Announced(Option<Team>),
+    Envit(Option<Team>),
+    // If Resto is agreed we gotta check the cards to get the winner
+    Resto,
+}
+
 pub struct FlorScorer {
-    flor_bet: Option<GameBet<flor::Bet>>,
+    agreed_bet: Option<AgreedBet>,
 }
 
 impl FlorScorer {
-    pub fn set_bet(&mut self, agreed_bet: flor::Bet, winner: Option<Team>) {
-        self.flor_bet = Some(GameBet { agreed_bet, winner });
+    pub fn set_bet(&mut self, bet_winner_status: AgreedBet) {
+        self.agreed_bet = Some(bet_winner_status);
     }
 }
 
 impl Default for FlorScorer {
     fn default() -> Self {
-        FlorScorer { flor_bet: None }
+        FlorScorer { agreed_bet: None }
     }
 }
 
 impl Scorer for FlorScorer {
     fn get_score(&self, round: &Round) -> Option<scoreboard::RoundScoreSection> {
         // Game must've been announced to be scored
-        let game_bet = self.flor_bet?;
+        let game_bet = self.agreed_bet?;
+
+        let bet_winner = match game_bet {
+            AgreedBet::Announced(winner) | AgreedBet::Envit(winner) => winner,
+            _ => None,
+        };
 
         let cards_winner = round.get_winner_from_cards::<flor::Flor>();
 
-        let winner = match (game_bet.winner, cards_winner) {
+        let winner = match (bet_winner, cards_winner) {
             // If there was a rejected bet, we've got a direct winner
             (Some(winner), _) => winner,
             // Otherwise get the winner from the facing up cards
@@ -57,10 +71,10 @@ impl Scorer for FlorScorer {
         let cama_win_score = round.game.scoreboard.game_config.cama_win_score;
         let resto = cama_win_score - max_score;
 
-        let score = match game_bet.agreed_bet {
-            flor::Bet::Announced => winner_flor_count * 3,
-            flor::Bet::Envit => total_flor_count * 3,
-            flor::Bet::Resto => total_flor_count * 3 + resto,
+        let score = match game_bet {
+            AgreedBet::Announced(_) => winner_flor_count * 3,
+            AgreedBet::Envit(_) => total_flor_count * 3,
+            AgreedBet::Resto => total_flor_count * 3 + resto,
         };
 
         Some(scoreboard::RoundScoreSection(winner, score))
@@ -77,12 +91,16 @@ mod tests {
 
     #[test]
     fn test_set_flor_bet() {
-        unimplemented!()
-    }
+        let mut flor_scorer = FlorScorer::default();
+        let bet = AgreedBet::Envit(Some(Team::Team1));
 
-    #[test]
-    fn test_set_flor_bet_resto_with_winner_fails() {
-        unimplemented!()
+        assert!(flor_scorer.agreed_bet.is_none());
+
+        flor_scorer.set_bet(bet);
+
+        assert!(flor_scorer.agreed_bet.is_some());
+
+        assert_eq!(flor_scorer.agreed_bet, Some(bet));
     }
 
     fn flor_tests_round_fixture(game: &Game) -> Round {
@@ -181,9 +199,8 @@ mod tests {
 
     #[test]
     fn get_flor_score_announced_no_flor() {
-        unimplemented!();
-
         // This situation should be impossible! Testing as it can be done in code anyway
+
         let game = Game::new(vec![Player::new("a"), Player::new("b")]);
         let mut round = Round::new(&game, &game.players[0], deck::Deck::default());
 
@@ -210,7 +227,7 @@ mod tests {
         ];
 
         let mut flor_scorer = FlorScorer::default();
-        flor_scorer.set_bet(flor::Bet::Envit, None);
+        flor_scorer.set_bet(AgreedBet::Envit(None));
 
         assert!(flor_scorer.get_score(&round).is_none())
     }
@@ -221,7 +238,7 @@ mod tests {
         let round = flor_tests_round_fixture(&game);
 
         let mut flor_scorer = FlorScorer::default();
-        flor_scorer.set_bet(flor::Bet::Announced, Some(Team::Team2));
+        flor_scorer.set_bet(AgreedBet::Announced(Some(Team::Team2)));
 
         let expected = Some(scoreboard::RoundScoreSection(Team::Team2, 6));
         assert_eq!(flor_scorer.get_score(&round), expected);
@@ -233,7 +250,7 @@ mod tests {
         let round = flor_tests_round_fixture(&game);
 
         let mut flor_scorer = FlorScorer::default();
-        flor_scorer.set_bet(flor::Bet::Announced, None);
+        flor_scorer.set_bet(AgreedBet::Announced(None));
 
         let expected = Some(scoreboard::RoundScoreSection(Team::Team2, 6));
         assert_eq!(flor_scorer.get_score(&round), expected);
@@ -245,7 +262,7 @@ mod tests {
         let round = flor_tests_round_fixture(&game);
 
         let mut flor_scorer = FlorScorer::default();
-        flor_scorer.set_bet(flor::Bet::Envit, Some(Team::Team2));
+        flor_scorer.set_bet(AgreedBet::Envit(Some(Team::Team2)));
 
         let expected = Some(scoreboard::RoundScoreSection(Team::Team2, 12));
         assert_eq!(flor_scorer.get_score(&round), expected);
@@ -257,30 +274,9 @@ mod tests {
         let round = flor_tests_round_fixture(&game);
 
         let mut flor_scorer = FlorScorer::default();
-        flor_scorer.set_bet(flor::Bet::Envit, None);
+        flor_scorer.set_bet(AgreedBet::Envit(None));
 
         let expected = Some(scoreboard::RoundScoreSection(Team::Team2, 12));
-        assert_eq!(flor_scorer.get_score(&round), expected);
-    }
-
-    #[test]
-    fn get_flor_score_resto_won_bet() {
-        unimplemented!("This test should not make sense");
-
-        let mut game = Game::new(vec![Player::new("a"), Player::new("b")]);
-        game.scoreboard.annotate(scoreboard::RoundScore {
-            rey: None,
-            flor: None,
-            secansa: None,
-            ali: None,
-            truc: scoreboard::RoundScoreSection(Team::Team1, 25),
-        });
-        let round = flor_tests_round_fixture(&game);
-
-        let mut flor_scorer = FlorScorer::default();
-        flor_scorer.set_bet(flor::Bet::Resto, Some(Team::Team2));
-
-        let expected = Some(scoreboard::RoundScoreSection(Team::Team2, 27));
         assert_eq!(flor_scorer.get_score(&round), expected);
     }
 
@@ -297,7 +293,7 @@ mod tests {
         let round = flor_tests_round_fixture(&game);
 
         let mut flor_scorer = FlorScorer::default();
-        flor_scorer.set_bet(flor::Bet::Resto, None);
+        flor_scorer.set_bet(AgreedBet::Resto);
 
         let expected = Some(scoreboard::RoundScoreSection(Team::Team2, 27));
         assert_eq!(flor_scorer.get_score(&round), expected);

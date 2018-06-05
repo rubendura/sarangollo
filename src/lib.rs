@@ -140,8 +140,8 @@ impl<'a> Round<'a> {
 
     // fn compute_game_winners(&mut self) -> Result<(), RoundNotFinishedError> {}
 
-    fn set_flor_bet(&mut self, agreed_bet: flor::Bet, winner: Option<Team>) {
-        self.flor_scorer.set_bet(agreed_bet, winner);
+    fn set_flor_bet(&mut self, agreed_bet: scorers::flor::AgreedBet) {
+        self.flor_scorer.set_bet(agreed_bet);
     }
 
     fn set_secansa_bet(&mut self, agreed_bet: secansa::Bet, winner: Option<Team>) {
@@ -515,7 +515,7 @@ mod tests {
         assert!(round.flor_scorer.get_score(&round).is_none());
 
         // After announcing
-        round.set_flor_bet(flor::Bet::Announced, None);
+        round.set_flor_bet(scorers::flor::AgreedBet::Announced(None));
 
         if let Some(result) = round.flor_scorer.get_score(&round) {
             assert_eq!(result.1, 3);
@@ -524,7 +524,7 @@ mod tests {
         };
 
         // After setting a bet
-        round.set_flor_bet(flor::Bet::Envit, None);
+        round.set_flor_bet(scorers::flor::AgreedBet::Envit(None));
 
         if let Some(result) = round.flor_scorer.get_score(&round) {
             assert_eq!(result.1, 6);

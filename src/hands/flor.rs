@@ -9,13 +9,6 @@ pub struct Flor<'a> {
     marker: Card,
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum Bet {
-    Announced,
-    Envit,
-    Resto,
-}
-
 impl<'a> Hand<'a> for Flor<'a> {
     fn from_cards(cards: &'a [Card], marker: Card) -> Option<Self> {
         if Self::is_flor(cards, marker) {
