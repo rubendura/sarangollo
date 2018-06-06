@@ -7,13 +7,6 @@ pub struct Secansa {
     cards: Vec<Card>,
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum Bet {
-    Announced,
-    Envit,
-    Val(u8),
-}
-
 impl<'a> Hand<'a> for Secansa {
     fn from_cards(cards: &[Card], _marker: Card) -> Option<Self> {
         Secansa::from_cards_slice(cards)
@@ -21,7 +14,7 @@ impl<'a> Hand<'a> for Secansa {
 }
 
 impl Secansa {
-    pub fn from_cards_slice(cards: &[Card]) -> Option<Self> {
+    fn from_cards_slice(cards: &[Card]) -> Option<Self> {
         if let Some(cards) = Self::sorted_secansa_cards(cards) {
             Some(Secansa { cards })
         } else {
