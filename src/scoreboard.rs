@@ -531,10 +531,10 @@ mod tests {
             truc: RoundScoreSection(Team::Team1, 1),
         };
         let mut cama = Cama::default();
-        assert!(cama.rounds.len() == 0);
+        assert!(cama.rounds.is_empty());
         cama.annotate(round_score);
-        assert!(cama.rounds.len() == 1);
-        assert!(*cama.rounds.first().unwrap() == round_score);
+        assert_eq!(cama.rounds.len(), 1);
+        assert_eq!(*cama.rounds.first().unwrap(), round_score);
     }
 
     #[test]
