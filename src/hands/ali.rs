@@ -8,13 +8,6 @@ pub struct Ali {
     cards: Vec<Card>,
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum Bet {
-    Announced,
-    Envit,
-    Val(u8),
-}
-
 impl<'a> Hand<'a> for Ali {
     fn from_cards(cards: &[Card], _marker: Card) -> Option<Self> {
         Ali::from_cards_slice(cards)
@@ -22,7 +15,7 @@ impl<'a> Hand<'a> for Ali {
 }
 
 impl Ali {
-    pub fn from_cards_slice(cards: &[Card]) -> Option<Self> {
+    fn from_cards_slice(cards: &[Card]) -> Option<Self> {
         cards
             .into_iter()
             .sorted_by_key(|card| card.value)
