@@ -11,6 +11,7 @@ pub enum AgreedBet {
     Val(u8, Option<Team>),
 }
 
+#[derive(Default)]
 pub struct SecansaScorer {
     agreed_bet: Option<AgreedBet>,
 }
@@ -18,12 +19,6 @@ pub struct SecansaScorer {
 impl SecansaScorer {
     pub fn set_bet(&mut self, agreed_bet: AgreedBet) {
         self.agreed_bet = Some(agreed_bet);
-    }
-}
-
-impl Default for SecansaScorer {
-    fn default() -> Self {
-        SecansaScorer { agreed_bet: None }
     }
 }
 

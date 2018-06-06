@@ -13,6 +13,7 @@ pub enum AgreedBet {
     Resto,
 }
 
+#[derive(Default)]
 pub struct FlorScorer {
     agreed_bet: Option<AgreedBet>,
 }
@@ -20,12 +21,6 @@ pub struct FlorScorer {
 impl FlorScorer {
     pub fn set_bet(&mut self, agreed_bet: AgreedBet) {
         self.agreed_bet = Some(agreed_bet);
-    }
-}
-
-impl Default for FlorScorer {
-    fn default() -> Self {
-        FlorScorer { agreed_bet: None }
     }
 }
 

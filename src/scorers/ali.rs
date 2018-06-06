@@ -11,6 +11,7 @@ pub enum AgreedBet {
     Val(u8, Option<Team>),
 }
 
+#[derive(Default)]
 pub struct AliScorer {
     agreed_bet: Option<AgreedBet>,
 }
@@ -18,12 +19,6 @@ pub struct AliScorer {
 impl AliScorer {
     pub fn set_bet(&mut self, agreed_bet: AgreedBet) {
         self.agreed_bet = Some(agreed_bet);
-    }
-}
-
-impl Default for AliScorer {
-    fn default() -> Self {
-        AliScorer { agreed_bet: None }
     }
 }
 
