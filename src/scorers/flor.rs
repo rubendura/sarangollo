@@ -1,7 +1,6 @@
 use super::Scorer;
 use hands::{flor, Hand};
 use scoreboard;
-use GameBet;
 use Round;
 use Team;
 
@@ -19,8 +18,8 @@ pub struct FlorScorer {
 }
 
 impl FlorScorer {
-    pub fn set_bet(&mut self, bet_winner_status: AgreedBet) {
-        self.agreed_bet = Some(bet_winner_status);
+    pub fn set_bet(&mut self, agreed_bet: AgreedBet) {
+        self.agreed_bet = Some(agreed_bet);
     }
 }
 
