@@ -131,6 +131,14 @@ impl TrucScorer {
 impl Scorer for TrucScorer {
     fn get_score(&self, round: &Round) -> Option<scoreboard::RoundScoreSection> {
         // First, map all shown cards to their respective TrucCard so we can compare them
+        round.iter_from_hand().map(|(team, seat)| {
+            let truc_cards = seat.face_up_cards.iter().map(|card| TrucCard {
+                card: *card,
+                round: round,
+            });
+            (team, truc_cards)
+        });
+
         None
     }
 }
