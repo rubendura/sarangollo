@@ -80,7 +80,7 @@ impl Game {
     fn new(players: Vec<Player>) -> Self {
         Game {
             players,
-            scoreboard: Default::default(),
+            scoreboard: scoreboard::Scoreboard::default(),
         }
     }
 }
@@ -162,7 +162,20 @@ impl<'a> Round<'a> {
         }
     }
 
-    fn iter_from_hand(&self) -> impl Iterator<Item = (Team, &Seat)> {
+    fn iter_with_team(&self) -> impl Iterator<Item = (Team, &Seat)> {
+        self.seats
+            .iter()
+
+            // Enumerate each seat's position
+            .enumerate()
+
+            .map(|(pos, seat)| {
+                let team = seat.get_team(pos as u8);
+                (team, seat)
+            })
+    }
+
+    fn iter_from_hand(&'a self) -> impl Iterator<Item = (Team, &'a Seat<'a>)> {
         self.seats
             .iter()
 
