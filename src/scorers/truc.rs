@@ -6,22 +6,22 @@ use Team;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
 enum TrucValue {
-    Perico,
-    Perica,
-    AsEspadas,
-    AsBastos,
-    SieteEspadas,
-    SieteOros,
-    Tres,
-    Dos,
-    AsBobo,
-    Rey,
-    Caballo,
-    Sota,
-    SieteBobo,
-    Seis,
-    Cinco,
     Cuatro,
+    Cinco,
+    Seis,
+    SieteBobo,
+    Sota,
+    Caballo,
+    Rey,
+    AsBobo,
+    Dos,
+    Tres,
+    SieteOros,
+    SieteEspadas,
+    AsBastos,
+    AsEspadas,
+    Perica,
+    Perico,
 }
 
 impl TrucValue {
@@ -248,6 +248,11 @@ fn get_truc_winner(bazas: &[BazaWinner]) -> Option<Team> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn compare_truc_value() {
+        assert!(TrucValue::AsEspadas > TrucValue::Cinco)
+    }
 
     #[test]
     fn get_baza_winner_no_cards() {
