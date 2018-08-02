@@ -109,10 +109,7 @@ impl Bet {
     }
 }
 
-struct AgreedBet {
-    bet: Bet,
-}
-
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum BazaWinner {
     Team1,
     Team2,
@@ -131,7 +128,8 @@ struct Baza {
 
 impl Baza {
     fn new(baza: &[(deck::Card, Team)], marker: deck::Card) -> Baza {
-        let baza_cards = baza.iter()
+        let baza_cards = baza
+            .iter()
             .map(|&(card, team)| BazaCard {
                 card: TrucValue::new(card, marker),
                 team,
@@ -141,7 +139,7 @@ impl Baza {
     }
 
     fn winner(&self) -> BazaWinner {
-        // If there's no cards it automatically a Tie
+        // If there's no cards it is automatically a Tie
         if self.cards.len() == 0 {
             return BazaWinner::Tie;
         }
@@ -256,22 +254,148 @@ mod tests {
 
     #[test]
     fn get_baza_winner_no_cards() {
-        // TrucScorer::get_baza_winner([], _) == Tie
+        let baza = Baza::new(
+            &[],
+            Card {
+                value: Value::Rey,
+                suit: Suit::Bastos,
+            },
+        );
+        assert_eq!(BazaWinner::Tie, baza.winner())
     }
 
     #[test]
     fn get_baza_winner_tie() {
-        unimplemented!()
+        let baza = Baza::new(
+            &[
+                (
+                    Card {
+                        value: Value::Tres,
+                        suit: Suit::Bastos,
+                    },
+                    Team::Team1,
+                ),
+                (
+                    Card {
+                        value: Value::Tres,
+                        suit: Suit::Copas,
+                    },
+                    Team::Team2,
+                ),
+            ],
+            Card {
+                value: Value::Rey,
+                suit: Suit::Bastos,
+            },
+        );
+        assert_eq!(BazaWinner::Tie, baza.winner())
     }
 
     #[test]
-    fn get_baza_winner_tie_tree_different_teams() {
-        unimplemented!()
+    fn get_baza_winner_one_card() {
+        let baza = Baza::new(
+            &[(
+                Card {
+                    value: Value::Tres,
+                    suit: Suit::Bastos,
+                },
+                Team::Team2,
+            )],
+            Card {
+                value: Value::Rey,
+                suit: Suit::Bastos,
+            },
+        );
+        assert_eq!(BazaWinner::Team2, baza.winner())
     }
 
     #[test]
-    fn get_baza_winner_tie_three_same_team() {
-        unimplemented!()
+    fn get_baza_winner_dedup() {
+        let baza = Baza::new(
+            &[
+                (
+                    Card {
+                        value: Value::Tres,
+                        suit: Suit::Bastos,
+                    },
+                    Team::Team1,
+                ),
+                (
+                    Card {
+                        value: Value::Dos,
+                        suit: Suit::Bastos,
+                    },
+                    Team::Team2,
+                ),
+                (
+                    Card {
+                        value: Value::Tres,
+                        suit: Suit::Bastos,
+                    },
+                    Team::Team1,
+                ),
+            ],
+            Card {
+                value: Value::Rey,
+                suit: Suit::Bastos,
+            },
+        );
+        assert_eq!(BazaWinner::Team1, baza.winner())
+    }
+
+    #[test]
+    fn get_baza_winner() {
+        let baza = Baza::new(
+            &[
+                (
+                    Card {
+                        value: Value::Tres,
+                        suit: Suit::Bastos,
+                    },
+                    Team::Team1,
+                ),
+                (
+                    Card {
+                        value: Value::Tres,
+                        suit: Suit::Copas,
+                    },
+                    Team::Team2,
+                ),
+                (
+                    Card {
+                        value: Value::Sota,
+                        suit: Suit::Bastos,
+                    },
+                    Team::Team1,
+                ),
+                (
+                    Card {
+                        value: Value::Caballo,
+                        suit: Suit::Bastos,
+                    },
+                    Team::Team2,
+                ),
+                (
+                    Card {
+                        value: Value::Cuatro,
+                        suit: Suit::Bastos,
+                    },
+                    Team::Team1,
+                ),
+                (
+                    Card {
+                        value: Value::Dos,
+                        suit: Suit::Espadas,
+                    },
+                    Team::Team2,
+                ),
+            ],
+            Card {
+                value: Value::Rey,
+                suit: Suit::Bastos,
+            },
+        );
+        assert_eq!(BazaWinner::Team2, baza.winner())
     }
 
 }
