@@ -113,7 +113,7 @@ impl Bet {
 enum BazaWinner {
     Team1,
     Team2,
-    Tie,
+    Parda,
 }
 
 #[derive(Copy, Clone)]
@@ -139,9 +139,9 @@ impl Baza {
     }
 
     fn winner(&self) -> BazaWinner {
-        // If there's no cards it is automatically a Tie
+        // If there's no cards it is automatically Parda
         if self.cards.len() == 0 {
-            return BazaWinner::Tie;
+            return BazaWinner::Parda;
         }
 
         let mut truc_cards = self.cards.clone();
@@ -151,7 +151,7 @@ impl Baza {
         let highest_card = truc_cards[0].card;
 
         // Get the highest cards and check the teams.
-        // If only one, that's the winner. Otherwise there is a tie
+        // If only one, that's the winner. Otherwise there is Parda
         let mut high_card_teams = truc_cards
             .iter()
             .filter(|baza_card| baza_card.card == highest_card)
@@ -163,7 +163,7 @@ impl Baza {
         match high_card_teams.as_slice() {
             [Team::Team1] => BazaWinner::Team1,
             [Team::Team2] => BazaWinner::Team2,
-            _ => BazaWinner::Tie,
+            _ => BazaWinner::Parda,
         }
     }
 }
@@ -228,17 +228,24 @@ fn get_truc_winner(bazas: &[BazaWinner]) -> Option<Team> {
     bazas
         .iter()
         .scan((0, 0), |state, baza_winner| {
-            Some(match baza_winner {
+            let score = match baza_winner {
                 BazaWinner::Team1 => (state.0 + 1, state.1),
                 BazaWinner::Team2 => (state.0, state.1 + 1),
-                BazaWinner::Tie => (state.0 + 1, state.1 + 1),
-            })
+                BazaWinner::Parda => (state.0 + 1, state.1 + 1),
+            };
+            *state = score;
+            Some(score)
         })
-        .filter_map(|state| match state {
-            (team1, team2) if team1 == team2 => None,
-            (team1, _) if team1 >= 2 => Some(Team::Team1),
-            (_, score2) if score2 >= 2 => Some(Team::Team2),
-            _ => None,
+        .filter_map(|(team1, team2)| {
+            if team1 == team2 {
+                None
+            } else if team1 >= 2 && team1 > team2 {
+                Some(Team::Team1)
+            } else if team2 >= 2 && team2 > team1 {
+                Some(Team::Team2)
+            } else {
+                None
+            }
         })
         .nth(0)
 }
@@ -246,10 +253,11 @@ fn get_truc_winner(bazas: &[BazaWinner]) -> Option<Team> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_runner;
 
     #[test]
     fn compare_truc_value() {
-        assert!(TrucValue::AsEspadas > TrucValue::Cinco)
+        assert!(TrucValue::AsEspadas > TrucValue::Cinco);
     }
 
     #[test]
@@ -261,11 +269,11 @@ mod tests {
                 suit: Suit::Bastos,
             },
         );
-        assert_eq!(BazaWinner::Tie, baza.winner())
+        assert_eq!(BazaWinner::Parda, baza.winner());
     }
 
     #[test]
-    fn get_baza_winner_tie() {
+    fn get_baza_winner_parda() {
         let baza = Baza::new(
             &[
                 (
@@ -288,7 +296,7 @@ mod tests {
                 suit: Suit::Bastos,
             },
         );
-        assert_eq!(BazaWinner::Tie, baza.winner())
+        assert_eq!(BazaWinner::Parda, baza.winner());
     }
 
     #[test]
@@ -306,7 +314,7 @@ mod tests {
                 suit: Suit::Bastos,
             },
         );
-        assert_eq!(BazaWinner::Team2, baza.winner())
+        assert_eq!(BazaWinner::Team2, baza.winner());
     }
 
     #[test]
@@ -340,7 +348,7 @@ mod tests {
                 suit: Suit::Bastos,
             },
         );
-        assert_eq!(BazaWinner::Team1, baza.winner())
+        assert_eq!(BazaWinner::Team1, baza.winner());
     }
 
     #[test]
@@ -395,7 +403,124 @@ mod tests {
                 suit: Suit::Bastos,
             },
         );
-        assert_eq!(BazaWinner::Team2, baza.winner())
+        assert_eq!(BazaWinner::Team2, baza.winner());
+    }
+
+    #[test]
+    fn get_truc_winner_no_baza() {
+        let winner = get_truc_winner(&[]);
+        assert_eq!(None, winner);
+    }
+
+    #[test]
+    fn get_truc_winner_one_baza() {
+        let winner = get_truc_winner(&[BazaWinner::Team1]);
+        assert_eq!(None, winner);
+
+        let winner = get_truc_winner(&[BazaWinner::Team2]);
+        assert_eq!(None, winner);
+
+        let winner = get_truc_winner(&[BazaWinner::Parda]);
+        assert_eq!(None, winner);
+    }
+
+    #[test]
+    fn get_truc_winner_two_bazas_table_test() {
+        let test_cases = [
+            test_runner::TestCase {
+                description: "Team1 wins two first bazas",
+                input: [BazaWinner::Team1, BazaWinner::Team1],
+                expected: Some(Team::Team1),
+            },
+            test_runner::TestCase {
+                description: "Team2 wins two first bazas",
+                input: [BazaWinner::Team2, BazaWinner::Team2],
+                expected: Some(Team::Team2),
+            },
+            test_runner::TestCase {
+                description: "One baza each",
+                input: [BazaWinner::Team1, BazaWinner::Team2],
+                expected: None,
+            },
+            test_runner::TestCase {
+                description: "Two Pardas",
+                input: [BazaWinner::Parda, BazaWinner::Parda],
+                expected: None,
+            },
+            // If first Parda, next one wins
+            test_runner::TestCase {
+                description: "Parda, then Team2",
+                input: [BazaWinner::Parda, BazaWinner::Team2],
+                expected: Some(Team::Team2),
+            },
+            // If second one Parda, previous wins
+            test_runner::TestCase {
+                description: "Team1, then Parda",
+                input: [BazaWinner::Team1, BazaWinner::Parda],
+                expected: Some(Team::Team1),
+            },
+        ];
+        let runner = test_runner::run(&test_cases, |input, expected| {
+            let result = get_truc_winner(&input);
+            assert_eq!(expected, result);
+        });
+    }
+
+    #[test]
+    fn get_truc_winner_three_bazas_table_test() {
+        let test_cases = [
+            test_runner::TestCase {
+                description: "Team1 wins all bazas (last one irrelevant)",
+                input: [BazaWinner::Team1, BazaWinner::Team1, BazaWinner::Team1],
+                expected: Some(Team::Team1),
+            },
+            test_runner::TestCase {
+                description: "Team1 wins first two bazas, looses last (last one irrelevant)",
+                input: [BazaWinner::Team1, BazaWinner::Team1, BazaWinner::Team2],
+                expected: Some(Team::Team1),
+            },
+            test_runner::TestCase {
+                description: "Team1 looses first, wins other 2",
+                input: [BazaWinner::Team2, BazaWinner::Team1, BazaWinner::Team1],
+                expected: Some(Team::Team1),
+            },
+            test_runner::TestCase {
+                description: "Team1 wins first and last",
+                input: [BazaWinner::Team1, BazaWinner::Team2, BazaWinner::Team1],
+                expected: Some(Team::Team1),
+            },
+            test_runner::TestCase {
+                description: "Parda, then Team2",
+                input: [BazaWinner::Parda, BazaWinner::Team2, BazaWinner::Team1],
+                expected: Some(Team::Team2),
+            },
+            test_runner::TestCase {
+                description: "Parda, Parda, then Team2",
+                input: [BazaWinner::Parda, BazaWinner::Parda, BazaWinner::Team2],
+                expected: Some(Team::Team2),
+            },
+            // TODO confirm this
+            test_runner::TestCase {
+                description: "Parda, Parda, Parda",
+                input: [BazaWinner::Parda, BazaWinner::Parda, BazaWinner::Parda],
+                expected: None,
+            },
+            test_runner::TestCase {
+                description: "Team2, then Parda",
+                input: [BazaWinner::Team2, BazaWinner::Parda, BazaWinner::Team1],
+                expected: Some(Team::Team2),
+            },
+            // TODO confirm this test (should win first baza?)
+            test_runner::TestCase {
+                description: "Team2, Team1, then Parda",
+                input: [BazaWinner::Team2, BazaWinner::Team1, BazaWinner::Parda],
+                expected: Some(Team::Team2),
+            },
+        ];
+        let runner = test_runner::run(&test_cases, |input, expected| {
+            let result = get_truc_winner(&input);
+            assert_eq!(expected, result);
+        });
     }
 
 }

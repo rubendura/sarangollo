@@ -6,6 +6,7 @@ mod deck;
 mod hands;
 pub mod scoreboard;
 mod scorers;
+mod test_runner;
 
 use hands::Hand;
 use scorers::Scorer;
