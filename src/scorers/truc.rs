@@ -225,7 +225,7 @@ impl Scorer for TrucScorer {
 }
 
 fn get_truc_winner(bazas: &[BazaWinner]) -> Option<Team> {
-    bazas
+    let winner = bazas
         .iter()
         .scan((0, 0), |state, baza_winner| {
             let score = match baza_winner {
@@ -247,7 +247,24 @@ fn get_truc_winner(bazas: &[BazaWinner]) -> Option<Team> {
                 None
             }
         })
-        .nth(0)
+        .nth(0);
+
+    // Special case: Team1 wins baza 1, Team2 wins baza 2, then Parda
+    // In this case the winner is whoever won the first baza
+    if winner.is_none() && bazas.len() >= 3 {
+        if bazas.iter().all(|&b| b == BazaWinner::Parda) {
+            return None;
+        }
+        match bazas[0] {
+            BazaWinner::Team1 => Some(Team::Team1),
+            BazaWinner::Team2 => Some(Team::Team2),
+            _ => unreachable!(
+                "It should not be possible to finish Truc in a draw when the first baza was not parda"
+            ),
+        }
+    } else {
+        winner
+    }
 }
 
 #[cfg(test)]
