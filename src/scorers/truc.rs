@@ -140,7 +140,7 @@ impl Baza {
 
     fn winner(&self) -> BazaWinner {
         // If there's no cards it is automatically Parda
-        if self.cards.len() == 0 {
+        if self.cards.is_empty() {
             return BazaWinner::Parda;
         }
 
