@@ -101,6 +101,7 @@ pub struct Round<'a> {
     flor_scorer: scorers::flor::FlorScorer,
     secansa_scorer: scorers::secansa::SecansaScorer,
     ali_scorer: scorers::ali::AliScorer,
+    truc_scorer: scorers::truc::TrucScorer,
 }
 
 impl<'a> Round<'a> {
@@ -115,6 +116,7 @@ impl<'a> Round<'a> {
             flor_scorer: Default::default(),
             secansa_scorer: Default::default(),
             ali_scorer: Default::default(),
+            truc_scorer: Default::default(),
         }
     }
 
@@ -151,6 +153,10 @@ impl<'a> Round<'a> {
 
     fn set_ali_bet(&mut self, agreed_bet: scorers::ali::AgreedBet) {
         self.ali_scorer.set_bet(agreed_bet)
+    }
+
+    fn set_truc_bet(&mut self, agreed_bet: scorers::truc::Bet) {
+        self.truc_scorer.set_bet(agreed_bet)
     }
 
     fn get_round_score(&self) -> scoreboard::RoundScore {
@@ -199,7 +205,8 @@ impl<'a> Round<'a> {
         H: Hand<'b>,
     {
         // Remove any seats without the hand
-        let mut hands_by_team = self.iter_from_hand()
+        let mut hands_by_team = self
+            .iter_from_hand()
             .filter_map(|(team, seat)| {
                 let face_up_cards = &seat.face_up_cards;
                 let hand = H::from_cards(face_up_cards, self.marker);
