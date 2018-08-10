@@ -25,8 +25,8 @@ pub enum Value {
 }
 
 impl Value {
-    pub fn next(&self) -> Option<Value> {
-        match *self {
+    pub fn next(self) -> Option<Value> {
+        match self {
             Value::Uno => Some(Value::Dos),
             Value::Dos => Some(Value::Tres),
             Value::Tres => Some(Value::Cuatro),
@@ -61,7 +61,7 @@ pub struct Card {
 }
 
 impl Card {
-    pub fn is_perico(&self, marker: Card) -> bool {
+    pub fn is_perico(self, marker: Card) -> bool {
         match marker {
             Card {
                 suit,
@@ -71,7 +71,7 @@ impl Card {
         }
     }
 
-    pub fn is_perica(&self, marker: Card) -> bool {
+    pub fn is_perica(self, marker: Card) -> bool {
         match marker {
             Card {
                 suit,

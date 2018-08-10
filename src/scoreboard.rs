@@ -96,7 +96,7 @@ impl Default for Scoreboard {
 pub struct RoundScoreSection(pub Team, pub u8);
 
 impl RoundScoreSection {
-    fn to_score_delta(&self) -> ScoreDelta {
+    fn to_score_delta(self) -> ScoreDelta {
         match self.0 {
             Team::Team1 => ScoreDelta {
                 team1: self.1,
@@ -153,7 +153,7 @@ pub struct CamaScore {
 }
 
 impl CamaScore {
-    pub fn max(&self) -> u8 {
+    pub fn max(self) -> u8 {
         if self.team1 >= self.team2 {
             self.team1
         } else {
@@ -303,11 +303,13 @@ mod tests {
             ali: None,
             truc: RoundScoreSection(Team::Team1, 3),
         });
-        assert!(!scoreboard
-            .get_current_coto()
-            .get_current_cama()
-            .rounds
-            .is_empty());
+        assert!(
+            !scoreboard
+                .get_current_coto()
+                .get_current_cama()
+                .rounds
+                .is_empty()
+        );
     }
 
     #[test]

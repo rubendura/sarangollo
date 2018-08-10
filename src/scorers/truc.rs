@@ -99,7 +99,7 @@ impl Default for Bet {
 }
 
 impl Bet {
-    fn get_score(&self) -> u8 {
+    fn get_score(self) -> u8 {
         match self {
             Bet::None => 1,
             Bet::Truc(_) => 3,
