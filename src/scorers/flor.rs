@@ -282,7 +282,7 @@ mod tests {
             flor: None,
             secansa: None,
             ali: None,
-            truc: scoreboard::RoundScoreSection(Team::Team1, 25),
+            truc: Some(scoreboard::RoundScoreSection(Team::Team1, 25)),
         });
         let round = flor_tests_round_fixture(&game);
 

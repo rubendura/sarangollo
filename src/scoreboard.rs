@@ -132,12 +132,12 @@ pub struct RoundScore {
     pub flor: Option<RoundScoreSection>,
     pub secansa: Option<RoundScoreSection>,
     pub ali: Option<RoundScoreSection>,
-    pub truc: RoundScoreSection,
+    pub truc: Option<RoundScoreSection>,
 }
 
 impl RoundScore {
     fn to_score_deltas(&self) -> Vec<ScoreDelta> {
-        let deltas = [self.rey, self.flor, self.secansa, self.ali, Some(self.truc)];
+        let deltas = [self.rey, self.flor, self.secansa, self.ali, self.truc];
         deltas
             .iter()
             .filter_map(|x| *x)
@@ -301,7 +301,7 @@ mod tests {
             flor: None,
             secansa: None,
             ali: None,
-            truc: RoundScoreSection(Team::Team1, 3),
+            truc: None,
         });
         assert!(
             !scoreboard
@@ -321,7 +321,7 @@ mod tests {
             flor: None,
             secansa: None,
             ali: None,
-            truc: RoundScoreSection(Team::Team1, 3),
+            truc: None,
         });
         assert_eq!(scoreboard.get_current_coto().cames.len(), 1);
         scoreboard.annotate(RoundScore {
@@ -329,7 +329,7 @@ mod tests {
             flor: None,
             secansa: None,
             ali: None,
-            truc: RoundScoreSection(Team::Team1, max_cama_score - 3),
+            truc: Some(RoundScoreSection(Team::Team1, max_cama_score)),
         });
         assert_eq!(scoreboard.get_current_coto().cames.len(), 2);
     }
@@ -344,7 +344,7 @@ mod tests {
                 flor: None,
                 secansa: None,
                 ali: None,
-                truc: RoundScoreSection(Team::Team1, 40),
+                truc: Some(RoundScoreSection(Team::Team1, 40)),
             });
         }
         assert_eq!(scoreboard.cotos.len(), 2);
@@ -373,7 +373,7 @@ mod tests {
                     flor: None,
                     secansa: None,
                     ali: None,
-                    truc: RoundScoreSection(team, cama_win_score),
+                    truc: Some(RoundScoreSection(team, cama_win_score)),
                 });
             scoreboard.get_current_coto_mut().start_cama();
         }
@@ -432,7 +432,7 @@ mod tests {
             flor: Some(RoundScoreSection(Team::Team1, 3)),
             secansa: Some(RoundScoreSection(Team::Team1, 1)),
             ali: Some(RoundScoreSection(Team::Team2, 5)),
-            truc: RoundScoreSection(Team::Team1, 1),
+            truc: Some(RoundScoreSection(Team::Team1, 1)),
         });
         let cama1 = coto.get_current_cama().clone();
         coto.start_cama();
@@ -450,7 +450,7 @@ mod tests {
                 flor: None,
                 secansa: None,
                 ali: None,
-                truc: RoundScoreSection(Team::Team1, 3),
+                truc: None,
             },
             game_config,
         );
@@ -467,7 +467,7 @@ mod tests {
                 flor: None,
                 secansa: None,
                 ali: None,
-                truc: RoundScoreSection(Team::Team1, 3),
+                truc: Some(RoundScoreSection(Team::Team1, 3)),
             },
             game_config,
         );
@@ -478,7 +478,7 @@ mod tests {
                 flor: None,
                 secansa: None,
                 ali: None,
-                truc: RoundScoreSection(Team::Team1, 37),
+                truc: Some(RoundScoreSection(Team::Team1, 37)),
             },
             game_config,
         );
@@ -497,7 +497,7 @@ mod tests {
             flor: None,
             secansa: None,
             ali: None,
-            truc: RoundScoreSection(Team::Team1, 40),
+            truc: Some(RoundScoreSection(Team::Team1, 40)),
         });
         assert_eq!(coto.winner(game_config), None);
 
@@ -507,7 +507,7 @@ mod tests {
             flor: None,
             secansa: None,
             ali: None,
-            truc: RoundScoreSection(Team::Team2, 40),
+            truc: Some(RoundScoreSection(Team::Team2, 40)),
         });
         assert_eq!(coto.winner(game_config), None);
 
@@ -517,7 +517,7 @@ mod tests {
             flor: None,
             secansa: None,
             ali: None,
-            truc: RoundScoreSection(Team::Team1, 40),
+            truc: Some(RoundScoreSection(Team::Team1, 40)),
         });
 
         assert_eq!(coto.winner(game_config), Some(Team::Team1));
@@ -530,7 +530,7 @@ mod tests {
             flor: Some(RoundScoreSection(Team::Team1, 3)),
             secansa: Some(RoundScoreSection(Team::Team1, 1)),
             ali: Some(RoundScoreSection(Team::Team2, 5)),
-            truc: RoundScoreSection(Team::Team1, 1),
+            truc: Some(RoundScoreSection(Team::Team1, 1)),
         };
         let mut cama = Cama::default();
         assert!(cama.rounds.is_empty());
@@ -547,14 +547,14 @@ mod tests {
             flor: Some(RoundScoreSection(Team::Team1, 3)),
             secansa: Some(RoundScoreSection(Team::Team1, 1)),
             ali: Some(RoundScoreSection(Team::Team2, 5)),
-            truc: RoundScoreSection(Team::Team1, 1),
+            truc: Some(RoundScoreSection(Team::Team1, 1)),
         });
         cama.annotate(RoundScore {
             rey: Some(RoundScoreSection(Team::Team1, 2)),
             flor: Some(RoundScoreSection(Team::Team2, 6)),
             secansa: Some(RoundScoreSection(Team::Team1, 3)),
             ali: Some(RoundScoreSection(Team::Team1, 1)),
-            truc: RoundScoreSection(Team::Team1, 1),
+            truc: Some(RoundScoreSection(Team::Team1, 1)),
         });
         let score = cama.score();
         let expected = CamaScore {
@@ -573,7 +573,7 @@ mod tests {
             flor: Some(RoundScoreSection(Team::Team1, 35)),
             secansa: None,
             ali: None,
-            truc: RoundScoreSection(Team::Team2, 34),
+            truc: Some(RoundScoreSection(Team::Team2, 34)),
         };
 
         let mut current_cama = Cama {
@@ -588,7 +588,7 @@ mod tests {
             flor: Some(RoundScoreSection(Team::Team1, 3)), // Team1: 38
             secansa: Some(RoundScoreSection(Team::Team1, 1)), // Team1: 39
             ali: Some(RoundScoreSection(Team::Team2, 5)), // Team2: 40 -> Cama!
-            truc: RoundScoreSection(Team::Team1, 1),      // Not used
+            truc: Some(RoundScoreSection(Team::Team1, 1)), // Not used
         });
 
         let winner = current_cama.winner(game_config);

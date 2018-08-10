@@ -165,7 +165,7 @@ impl<'a> Round<'a> {
             secansa: self.secansa_scorer.get_score(self),
             ali: self.ali_scorer.get_score(self),
             rey: scorers::rey::ReyScorer::default().get_score(self),
-            truc: scoreboard::RoundScoreSection(Team::Team1, 0),
+            truc: self.truc_scorer.get_score(self),
         }
     }
 
@@ -1218,6 +1218,115 @@ mod tests {
 
         let expected = Some(Team::Team1);
         assert_eq!(round.get_winner_from_cards::<ali::Ali>(), expected);
+    }
+
+    #[test]
+    fn get_round_score() {
+        let game = Game::new(vec![
+            Player::new("a"),
+            Player::new("b"),
+            Player::new("c"),
+            Player::new("d"),
+        ]);
+        let mut round = Round::new(&game, &game.players[1], deck::Deck::default());
+
+        round.seats = vec![
+            // 39 flor, 7-sota secansa, perica
+            Seat {
+                player: &game.players[0],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Siete,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Espadas,
+                        value: deck::Value::Sota,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Cinco,
+                    },
+                ],
+            },
+            // ali aces
+            Seat {
+                player: &game.players[1],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Uno,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Bastos,
+                        value: deck::Value::Uno,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Uno,
+                    },
+                ],
+            },
+            // secansa real, perico
+            Seat {
+                player: &game.players[2],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Espadas,
+                        value: deck::Value::Caballo,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Rey,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Bastos,
+                        value: deck::Value::Sota,
+                    },
+                ],
+            },
+            // secansa 3
+            Seat {
+                player: &game.players[3],
+                hand: vec![],
+                face_up_cards: vec![
+                    deck::Card {
+                        suit: deck::Suit::Oros,
+                        value: deck::Value::Cinco,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Bastos,
+                        value: deck::Value::Seis,
+                    },
+                    deck::Card {
+                        suit: deck::Suit::Copas,
+                        value: deck::Value::Siete,
+                    },
+                ],
+            },
+        ];
+
+        round
+            .flor_scorer
+            .set_bet(scorers::flor::AgreedBet::Announced(None));
+        round
+            .secansa_scorer
+            .set_bet(scorers::secansa::AgreedBet::Announced(None));
+        round
+            .ali_scorer
+            .set_bet(scorers::ali::AgreedBet::Announced(None));
+
+        let expected = scoreboard::RoundScore {
+            flor: Some(scoreboard::RoundScoreSection(Team::Team1, 3)),
+            secansa: Some(scoreboard::RoundScoreSection(Team::Team1, 4)),
+            ali: Some(scoreboard::RoundScoreSection(Team::Team2, 6)),
+            rey: Some(scoreboard::RoundScoreSection(Team::Team1, 1)),
+            truc: Some(scoreboard::RoundScoreSection(Team::Team1, 1)),
+        };
+        assert_eq!(expected, round.get_round_score());
     }
 
 }
